@@ -728,4 +728,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.2.14 - OAuth universale + Drive scopes + Setter gender check');
+console.log('✅ Google Auth v2.2.15 - Template fix + Setter gender check');

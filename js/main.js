@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.2.14 - MAIN LOGIC - GOOGLE DRIVE STORAGE + GENDER CHECK
+   TESTmess v2.2.15 - MAIN LOGIC - TEMPLATE FIX
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.14 inizializzato');
+    console.log('🚀 TESTmess v2.2.15 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -306,12 +306,14 @@ async function updatePreview() {
         return;
     }
     
-    // Carica template
-    const templates = JSON.parse((await getStorageItem(STORAGE_KEYS.TEMPLATES)) || '[]');
+    // Carica template (USA SEMPRE localStorage per templates)
+    const templatesString = localStorage.getItem('sgmess_templates_local');
+    const templates = JSON.parse(templatesString || '[]');
     const template = templates.find(t => t.id === tipoMessaggio);
     
     if (!template) {
         preview.value = 'Template non trovato!';
+        console.error('❌ Template non trovato per:', tipoMessaggio);
         return;
     }
     
@@ -635,6 +637,9 @@ async function initDefaultDay() {
 async function loadTemplates() {
     console.log('🔄 Caricamento templates...');
     
+    // FORZA RESET per v2.2.15 (assicura template corretto)
+    localStorage.removeItem('sgmess_templates_local');
+    
     // USA SEMPRE localStorage per templates (mai Drive)
     let templatesString = localStorage.getItem('sgmess_templates_local');
     console.log('📦 Templates localStorage:', templatesString);
@@ -654,6 +659,7 @@ async function loadTemplates() {
         templates = [defaultTemplate];
         localStorage.setItem('sgmess_templates_local', JSON.stringify(templates));
         console.log('✅ Template default creato e salvato');
+        console.log('📝 Template testo:', defaultTemplate.testo);
     }
     
     // Popola dropdown
@@ -706,4 +712,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.14 caricato');
+console.log('✅ Main.js v2.2.15 caricato');
