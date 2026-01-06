@@ -306,4 +306,4 @@ window.AssistentiGender = {
     loadAll: loadAllAssistenti
 };
 
-console.log('✅ Google Sheets Assistenti module caricato');
+console.log('✅ Google Sheets Assistenti module v2.2.16 caricato');

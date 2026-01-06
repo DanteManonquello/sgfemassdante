@@ -422,7 +422,7 @@ function showUserInfo(userInfo) {
     
     const operatoreName = document.getElementById('operatoreName');
     if (operatoreName) {
-        operatoreName.textContent = `by ${userInfo.name}`;
+        operatoreName.textContent = userInfo.name;
     }
     
     localStorage.setItem('sgmess_operator_name', userInfo.name);
@@ -571,7 +571,7 @@ function restoreSession() {
         
         const operatoreName = document.getElementById('operatoreName');
         if (operatoreName) {
-            operatoreName.textContent = `by ${savedName}`;
+            operatoreName.textContent = savedName;
         }
     }
 }
@@ -684,13 +684,14 @@ async function checkSetterGenderFromEvent(event) {
     const setterName = extractSetterFromEvent(event);
     
     if (!setterName) {
-        console.log('⚠️ Nome setter non trovato nell\'evento');
+        console.log('⚠️ Nome setter non trovato nell\'evento - uso genere Maschio come default');
+        setAssistenteToggle('M');
         return;
     }
     
     console.log(`🔍 Controllo genere per setter: ${setterName}`);
     
-    // Controlla se genere già conosciuto
+    // Controlla se genere già conosciuto nella cache
     const gender = await window.AssistentiGender.check(setterName);
     
     if (gender) {
@@ -698,13 +699,12 @@ async function checkSetterGenderFromEvent(event) {
         // Imposta automaticamente il toggle button
         setAssistenteToggle(gender);
     } else {
-        console.log(`⚠️ Genere non conosciuto per: ${setterName}, mostro popup`);
-        // Mostra popup per selezione genere
-        window.AssistentiGender.showPopup(setterName, (selectedGender) => {
-            console.log(`✅ Genere salvato: ${setterName} = ${selectedGender}`);
-            // Imposta automaticamente il toggle button
-            setAssistenteToggle(selectedGender);
-        });
+        // FALLBACK: Usa genere Maschio come default (NON mostrare popup)
+        console.log(`⚠️ Genere non conosciuto per: ${setterName}, uso Maschio come default`);
+        setAssistenteToggle('M');
+        
+        // Salva automaticamente in background per prossima volta
+        window.AssistentiGender.save(setterName, 'M');
     }
 }
 
@@ -728,4 +728,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.2.15 - Template fix + Setter gender check');
+console.log('✅ Google Auth v2.2.16 - Rimosso "by" + Genere setter senza popup');

@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.2.15 - MAIN LOGIC - TEMPLATE FIX
+   TESTmess v2.2.16 - MAIN LOGIC - NO POPUP GENERE + BY RIMOSSO
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.15 inizializzato');
+    console.log('🚀 TESTmess v2.2.16 inizializzato');
     
     setupSidebar();
     setupNavigation();

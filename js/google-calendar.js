@@ -694,4 +694,4 @@ window.displayCalendarView = displayCalendarView;
 window.setTodayDate = setTodayDate;
 window.updateLeadsList = updateLeadsList;
 
-console.log('✅ Google Calendar module v2.2.12 caricato');
+console.log('✅ Google Calendar module v2.2.16 caricato');
