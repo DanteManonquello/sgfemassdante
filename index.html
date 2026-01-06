@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TESTmess v2.2.13 - Stock Gain Messenger</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google API -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <!-- HAMBURGER MENU -->
+    <button class="hamburger-btn" id="hamburgerBtn">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-bars"></i> Menu</h3>
+            <button class="close-sidebar" id="closeSidebar">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="#" class="sidebar-link active" data-page="home">
+                <i class="fas fa-home"></i> Home
+            </a>
+            <a href="#" class="sidebar-link" data-page="riconferme">
+                <i class="fas fa-calendar-check"></i> Ri-Conferme
+            </a>
+            <a href="#" class="sidebar-link" data-page="calendario">
+                <i class="fas fa-calendar-alt"></i> Calendario
+            </a>
+            <a href="#" class="sidebar-link" data-page="messaggi">
+                <i class="fas fa-comment-dots"></i> Scheletro Messaggi
+            </a>
+            <a href="#" class="sidebar-link" data-page="cronologia">
+                <i class="fas fa-history"></i> Cronologia
+            </a>
+            <a href="#" class="sidebar-link" data-page="importante">
+                <i class="fas fa-star"></i> IMPORTANTE CLICCA
+            </a>
+        </nav>
+    </div>
+
+    <!-- OVERLAY SIDEBAR -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- CONTAINER PRINCIPALE -->
+    <div class="container">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-content">
+                <!-- Logo/Avatar Placeholder -->
+                <div class="header-avatar" id="headerAvatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                
+                <!-- Titolo e Nome Operatore -->
+                <div class="header-text">
+                    <h1 class="header-title">TESTmess v2.2.13</h1>
+                    <p class="header-subtitle" id="operatoreName">Stock Gain Messenger</p>
+                </div>
+                
+                <!-- WhatsApp Icon -->
+                <i class="fab fa-whatsapp header-icon-right"></i>
+            </div>
+
+            <!-- Google Auth + Status -->
+            <div class="google-auth">
+                <button class="google-btn" id="googleSignInBtn" disabled>
+                    <i class="fab fa-google"></i>
+                    <span>Connetti Google</span>
+                </button>
+                
+                <div class="user-info" id="userInfo" style="display: none;">
+                    <img src="" alt="Profile" class="user-profile-pic" id="userProfilePic">
+                </div>
+            </div>
+        </header>
+
+        <!-- ========================================
+             PAGINA HOME (MAIN CONTENT)
+        ======================================== -->
+        <div id="mainContent" class="page-content">
+            <!-- Indicatore ultimo messaggio -->
+            <div class="last-message-indicator" id="lastMessageIndicator" style="display: none;">
+                <i class="fas fa-info-circle"></i>
+                <span id="lastMessageText"></span>
+            </div>
+
+            <!-- Dropdown Appuntamenti Giorno -->
+            <div class="card">
+                <div class="card-title">
+                    <span><i class="fas fa-calendar-day"></i> Appuntamenti del Giorno</span>
+                    <button type="button" class="btn-icon" id="refreshLeadsBtn" title="Aggiorna lead">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label for="selectDay">
+                        <i class="fas fa-calendar"></i> Seleziona Giorno
+                    </label>
+                    <input type="date" id="selectDay" class="form-control date-picker">
+                </div>
+                <div class="form-group">
+                    <label for="selectLead">
+                        <i class="fas fa-user-check"></i> Seleziona Lead
+                    </label>
+                    <select id="selectLead" class="form-control" disabled>
+                        <option value="">-- Prima scegli un giorno --</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Form Messaggio -->
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-edit"></i> Genera Messaggio
+                </div>
+                
+                <form id="messageForm">
+                    <!-- Tipo Messaggio -->
+                    <div class="form-group">
+                        <label for="tipoMessaggio">
+                            <i class="fas fa-list"></i> Tipo Messaggio
+                        </label>
+                        <select id="tipoMessaggio" class="form-control">
+                            <option value="primo_messaggio">Primo Messaggio</option>
+                        </select>
+                    </div>
+
+                    <!-- Nome Cliente -->
+                    <div class="form-group">
+                        <label for="nome">
+                            <i class="fas fa-user"></i> Nome Cliente
+                        </label>
+                        <input 
+                            type="text" 
+                            id="nome" 
+                            class="form-control" 
+                            placeholder="Inserisci il nome"
+                            required
+                        >
+                    </div>
+
+                    <!-- Cognome Cliente -->
+                    <div class="form-group">
+                        <label for="cognome">
+                            <i class="fas fa-user-tag"></i> Cognome
+                            <span class="label-hint">(per il salvataggio in rubrica, non appare nel messaggio)</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="cognome" 
+                            class="form-control" 
+                            placeholder="Inserisci il cognome"
+                        >
+                    </div>
+
+                    <!-- Numero Telefono -->
+                    <div class="form-group">
+                        <label for="telefono">
+                            <i class="fas fa-phone"></i> Numero Telefono
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="telefono" 
+                            class="form-control" 
+                            placeholder="+39 333 1234567"
+                        >
+                    </div>
+
+                    <!-- Servizio -->
+                    <div class="form-group">
+                        <label for="servizio">
+                            <i class="fas fa-briefcase"></i> Servizio
+                        </label>
+                        <select id="servizio" class="form-control">
+                            <option value="Stock Gain">Stock Gain</option>
+                            <option value="Finanza Efficace">Finanza Efficace</option>
+                        </select>
+                    </div>
+
+                    <!-- Società (per rubrica) -->
+                    <div class="form-group">
+                        <label for="societaSelect">
+                            <i class="fas fa-building"></i> Società
+                            <span class="label-hint">(per il salvataggio in rubrica, non appare nel messaggio)</span>
+                        </label>
+                        <select id="societaSelect" class="form-control">
+                            <option value="SG - Lead">SG - Lead</option>
+                            <option value="FE - Lead">FE - Lead</option>
+                            <option value="Altro">Altro (scrivi sotto)</option>
+                        </select>
+                        <input 
+                            type="text" 
+                            id="societaCustom" 
+                            class="form-control" 
+                            placeholder="Scrivi società personalizzata..."
+                            style="margin-top: 10px; display: none;"
+                        >
+                    </div>
+
+                    <!-- Assistente M/F -->
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-venus-mars"></i> Assistente
+                        </label>
+                        <div class="toggle-group">
+                            <button type="button" class="toggle-btn active" data-value="M">
+                                <i class="fas fa-mars"></i> Maschio
+                            </button>
+                            <button type="button" class="toggle-btn" data-value="F">
+                                <i class="fas fa-venus"></i> Femmina
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Giorno -->
+                    <div class="form-group">
+                        <label for="giorno">
+                            <i class="fas fa-calendar-day"></i> Giorno
+                        </label>
+                        <select id="giorno" class="form-control">
+                            <option value="lunedì">Lunedì</option>
+                            <option value="martedì">Martedì</option>
+                            <option value="mercoledì">Mercoledì</option>
+                            <option value="giovedì">Giovedì</option>
+                            <option value="venerdì">Venerdì</option>
+                            <option value="sabato">Sabato</option>
+                            <option value="domenica">Domenica</option>
+                            <option value="oggi">Oggi</option>
+                            <option value="domani">Domani</option>
+                        </select>
+                    </div>
+
+                    <!-- Orario con pulsanti -->
+                    <div class="form-group">
+                        <label for="orario">
+                            <i class="fas fa-clock"></i> Orario
+                        </label>
+                        <div class="time-input-group">
+                            <button type="button" class="time-btn" id="decreaseTime1h">
+                                <i class="fas fa-minus"></i> 1h
+                            </button>
+                            <button type="button" class="time-btn" id="decreaseTime30m">
+                                <i class="fas fa-minus"></i> 30m
+                            </button>
+                            <input 
+                                type="text" 
+                                id="orario" 
+                                class="form-control time-input" 
+                                value="15"
+                                maxlength="5"
+                            >
+                            <button type="button" class="time-btn" id="increaseTime30m">
+                                <i class="fas fa-plus"></i> 30m
+                            </button>
+                            <button type="button" class="time-btn" id="increaseTime1h">
+                                <i class="fas fa-plus"></i> 1h
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modalità videochiamata -->
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-video"></i> Modalità videochiamata
+                        </label>
+                        <div class="toggle-group">
+                            <button type="button" class="toggle-btn active" data-value="LINK">
+                                <i class="fas fa-link"></i> Link
+                            </button>
+                            <button type="button" class="toggle-btn" data-value="WA">
+                                <i class="fab fa-whatsapp"></i> WhatsApp
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pulsanti -->
+                    <div class="button-group">
+                        <button type="button" class="btn btn-whatsapp" id="inviaMessaggio">
+                            <i class="fab fa-whatsapp"></i> Invia su WhatsApp
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="generaMessaggio">
+                            <i class="fas fa-magic"></i> Genera Messaggio
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Anteprima in tempo reale (editabile) -->
+            <div class="card preview-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-eye"></i> Anteprima Messaggio
+                    </div>
+                </div>
+                <textarea id="anteprimaMessaggio" class="message-preview" rows="8" placeholder="Compila i campi sopra per vedere l'anteprima..."></textarea>
+            </div>
+
+            <!-- Messaggio Finale (appare solo dopo genera/invia) -->
+            <div class="card output-card" id="outputCard" style="display: none;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fas fa-comment-dots"></i> Messaggio Generato
+                    </div>
+                    <button type="button" class="btn-copy" id="copiaMessaggio">
+                        <i class="fas fa-copy"></i> Copia
+                    </button>
+                </div>
+                <div class="message-output" id="outputMessaggio"></div>
+            </div>
+
+            <!-- Info contatto salvato -->
+            <div class="contact-info" id="contactSaveInfo" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <span id="contactSaveText"></span>
+            </div>
+        </div>
+
+        <!-- ========================================
+             PAGINA RI-CONFERME
+        ======================================== -->
+        <div id="riconfermeContent" class="page-content" style="display: none;">
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-calendar-check"></i> Ri-Conferme Appuntamenti
+                </div>
+                <p style="margin-bottom: 20px; color: var(--gray-600);">
+                    Questa sezione mostra gli appuntamenti da confermare presi da Google Calendar.
+                </p>
+                <div id="riconfermeList" class="cronologia-list">
+                    <p class="placeholder-text">Sincronizza Google Calendar per vedere gli appuntamenti da confermare...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             PAGINA CALENDARIO
+        ======================================== -->
+        <div id="calendarioContent" class="page-content" style="display: none;">
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-calendar-alt"></i> Calendario Eventi
+                </div>
+                
+                <!-- Selezione Calendari -->
+                <div class="form-group">
+                    <label><i class="fas fa-list-check"></i> Seleziona Calendari da Sincronizzare</label>
+                    <div id="calendarListSelection" class="calendar-selection">
+                        <p class="placeholder-text">Connetti Google per vedere i tuoi calendari...</p>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="syncCalendarBtn" style="margin-top: 15px;">
+                        <i class="fas fa-sync"></i> Sincronizza Ora
+                    </button>
+                </div>
+
+                <!-- Calendario Visivo -->
+                <div id="calendarView" class="calendar-view">
+                    <p class="placeholder-text">Nessun evento sincronizzato...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             PAGINA SCHELETRO MESSAGGI
+        ======================================== -->
+        <div id="messaggiContent" class="page-content" style="display: none;">
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-comment-dots"></i> Scheletro Messaggi
+                </div>
+                <p style="margin-bottom: 20px; color: var(--gray-600);">
+                    Crea template di messaggi personalizzati con variabili dinamiche.
+                </p>
+                
+                <button type="button" class="btn btn-primary" id="nuovoMessaggioBtn">
+                    <i class="fas fa-plus"></i> Crea Nuovo Messaggio
+                </button>
+
+                <div id="messaggiList" class="messaggi-list" style="margin-top: 20px;">
+                    <!-- Lista messaggi caricati dinamicamente -->
+                </div>
+            </div>
+
+            <!-- Modal Crea/Modifica Messaggio -->
+            <div class="modal" id="messaggioModal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 id="modalTitle"><i class="fas fa-plus"></i> Nuovo Messaggio</h3>
+                        <button class="modal-close" id="closeModalBtn">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="nomeTemplate"><i class="fas fa-tag"></i> Nome Messaggio</label>
+                            <input type="text" id="nomeTemplate" class="form-control" placeholder="es. Primo Contatto">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="categoriaTemplate"><i class="fas fa-folder"></i> Categoria</label>
+                            <select id="categoriaTemplate" class="form-control">
+                                <option value="Primo Messaggio">Primo Messaggio</option>
+                                <option value="Conferma">Conferma</option>
+                                <option value="Altro">Altro</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="testoTemplate"><i class="fas fa-file-alt"></i> Testo Scheletro</label>
+                            <textarea id="testoTemplate" class="form-control" rows="8" placeholder="Scrivi il messaggio usando le variabili..."></textarea>
+                            
+                            <div class="variabili-help">
+                                <strong>Variabili disponibili:</strong>
+                                <button type="button" class="var-btn" data-var="{BB}">BB (Saluto)</button>
+                                <button type="button" class="var-btn" data-var="{NN}">NN (Nome)</button>
+                                <button type="button" class="var-btn" data-var="{OPERATORE}">OPERATORE</button>
+                                <button type="button" class="var-btn" data-var="{SERVIZIO}">SERVIZIO</button>
+                                <button type="button" class="var-btn" data-var="{YY}">YY (il mio/la mia)</button>
+                                <button type="button" class="var-btn" data-var="{GG}">GG (Giorno)</button>
+                                <button type="button" class="var-btn" data-var="{HH}">HH (Orario)</button>
+                                <button type="button" class="var-btn" data-var="{VV}">VV (Modalità)</button>
+                                <button type="button" class="var-btn" data-var="{TT}">TT (Chiusura)</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group" id="altroSpecificaGroup" style="display: none;">
+                            <label for="altroSpecifica"><i class="fas fa-info-circle"></i> Specifica "Altro"</label>
+                            <input type="text" id="altroSpecifica" class="form-control" placeholder="Descrivi l'utilizzo di questo messaggio">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" id="salvaTemplateBtn">
+                            <i class="fas fa-save"></i> Salva
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             PAGINA CRONOLOGIA
+        ======================================== -->
+        <div id="cronologiaContent" class="page-content" style="display: none;">
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-history"></i> Cronologia Messaggi
+                </div>
+                <div id="cronologiaList" class="cronologia-list">
+                    <p class="placeholder-text">Nessun messaggio inviato ancora...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
+             PAGINA IMPORTANTE
+        ======================================== -->
+        <div id="importanteContent" class="page-content" style="display: none;">
+            <div class="card importante-card">
+                <div class="card-title">
+                    <i class="fas fa-star"></i> IMPORTANTE CLICCA
+                </div>
+                <div class="importante-content">
+                    <p class="importante-text">
+                        Dante vuole comprare Shein e chiuderlo, sostienimi
+                    </p>
+                    <div class="iban-section">
+                        <label for="ibanField">IBAN per donazione:</label>
+                        <div class="iban-copy-group">
+                            <input 
+                                type="text" 
+                                id="ibanField" 
+                                class="form-control iban-field" 
+                                value="IT48X0200805302000106608426" 
+                                readonly
+                            >
+                            <button type="button" class="btn-copy" id="copiaIban">
+                                <i class="fas fa-copy"></i> Copia IBAN
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NOTIFICA -->
+    <div class="notification" id="notifica">
+        <i class="fas fa-check-circle"></i>
+        <span id="notificaText"></span>
+    </div>
+
+
+
+    <!-- ========================================
+         DEBUG PANEL (nascosto di default)
+    ======================================== -->
+    <div id="authDebugPanel" style="display: none; position: fixed; bottom: 10px; right: 10px; width: 400px; max-height: 300px; background: white; border: 2px solid #1976d2; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 10000; overflow: hidden;">
+        <div style="background: #1976d2; color: white; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <strong><i class="fas fa-bug"></i> Debug Auth</strong>
+            <button onclick="toggleDebugMode()" style="background: transparent; border: none; color: white; cursor: pointer; font-size: 16px;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="debugOutput" style="padding: 10px; max-height: 230px; overflow-y: auto; font-size: 12px; font-family: monospace;">
+            <!-- Log entries here -->
+        </div>
+    </div>
+
+    <!-- Pulsante Debug (sempre visibile) -->
+    <button 
+        id="toggleDebugBtn" 
+        onclick="toggleDebugMode()" 
+        style="position: fixed; bottom: 20px; right: 20px; background: #1976d2; color: white; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 20px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999;"
+        title="Toggle Debug Mode"
+    >
+        <i class="fas fa-bug"></i>
+    </button>
+
+    <!-- Scripts -->
+    <script src="js/nomi-italiani.js?v=2.2.12"></script>
+    <script src="js/config.js?v=2.2.13"></script>
+    <script src="js/google-auth.js?v=2.2.13"></script>
+    <script src="js/google-drive-storage.js?v=2.2.13"></script>
+    <script src="js/google-sheets-assistenti.js?v=2.2.13"></script>
+    <script src="js/google-calendar.js?v=2.2.13"></script>
+    <script src="js/templates.js?v=2.2.13"></script>
+    <script src="js/main.js?v=2.2.13"></script>
+    
+    <!-- Google API Initialization -->
+    <script>
+        window.addEventListener('load', function() {
+            // Sincronizza origin corrente
+            const currentOrigin = window.location.origin;
+            const originEl = document.getElementById('currentOrigin');
+            if (originEl) originEl.textContent = currentOrigin;
+            
+            // Pulsante copia origin
+            const copyOriginBtn = document.getElementById('copyOriginBtn');
+            if (copyOriginBtn) {
+                copyOriginBtn.addEventListener('click', function() {
+                    navigator.clipboard.writeText(currentOrigin).then(() => {
+                        const originalHTML = this.innerHTML;
+                        this.innerHTML = '<i class="fas fa-check"></i> Copiato!';
+                        this.style.background = '#4caf50';
+                        setTimeout(() => {
+                            this.innerHTML = originalHTML;
+                            this.style.background = '';
+                        }, 2000);
+                    }).catch(err => {
+                        alert('URL: ' + currentOrigin + '\n\nCopia manualmente questo URL');
+                    });
+                });
+            }
+            
+            // Inizializza Google APIs
+            if (typeof gapiLoaded !== 'undefined') {
+                gapiLoaded();
+            }
+            if (typeof gisLoaded !== 'undefined') {
+                gisLoaded();
+            }
+        });
+    </script>
+</body>
+</html>
