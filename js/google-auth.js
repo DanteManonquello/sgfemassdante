@@ -412,14 +412,9 @@ function showUserInfo(userInfo) {
     
     const headerAvatar = document.getElementById('headerAvatar');
     if (headerAvatar) {
-        if (userInfo.photo) {
-            headerAvatar.innerHTML = `<img src="${userInfo.photo}" alt="${userInfo.name}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;" />`;
-        } else {
-            // Fallback: mostra iniziale
-            const initial = userInfo.name.charAt(0).toUpperCase();
-            headerAvatar.innerHTML = `<div style="width: 100%; height: 100%; border-radius: 50%; background: #4285f4; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold;">${initial}</div>`;
-        }
-        console.log('✅ Header avatar aggiornato');
+        // Mantieni icona di default, non sovrascrivere con foto
+        // La foto profilo viene mostrata solo al centro della pagina
+        console.log('✅ Header avatar mantiene icona default');
     }
     
     if (userInfoDiv) {
@@ -437,11 +432,6 @@ function showUserInfo(userInfo) {
     
     localStorage.setItem('sgmess_operator_name', userInfo.name);
     localStorage.setItem('sgmess_operator_photo', userInfo.photo || '');
-    
-    // ✨ NUOVO: Controlla e salva genere assistente automaticamente
-    if (window.AssistentiGender && userInfo.name) {
-        checkAndSaveOperatorGender(userInfo.name);
-    }
     
     console.log('✅ User info completo visualizzato');
 }
@@ -672,24 +662,54 @@ console.error = function(...args) {
     }
 };
 
-// ===== CONTROLLO GENERE OPERATORE =====
-async function checkAndSaveOperatorGender(nomeOperatore) {
-    if (!nomeOperatore || !window.AssistentiGender) return;
+// ===== ESTRAI NOME SETTER DA EVENTO =====
+// Esempio: "Fabio Marano: Hight Ticket (11-45K) (Dante)" → "Dante"
+function extractSetterFromEvent(event) {
+    const summary = event.summary || '';
     
-    console.log(`🔍 Controllo genere per operatore: ${nomeOperatore}`);
+    // Cerca l'ultimo testo tra parentesi (che dovrebbe essere il nome del setter)
+    const matches = summary.match(/\(([^)]+)\)/g);
+    
+    if (matches && matches.length > 0) {
+        // Prendi l'ultima parentesi (dovrebbe contenere il nome setter)
+        const lastMatch = matches[matches.length - 1];
+        const setterName = lastMatch.replace(/[()]/g, '').trim();
+        
+        // Verifica che sia un nome (non numeri o altri metadati)
+        // Se contiene solo lettere e spazi, probabilmente è un nome
+        if (/^[a-zA-Z\s]+$/.test(setterName)) {
+            return setterName;
+        }
+    }
+    
+    return null;
+}
+
+// ===== CONTROLLO GENERE SETTER DA EVENTO =====
+async function checkSetterGenderFromEvent(event) {
+    if (!event || !window.AssistentiGender) return;
+    
+    const setterName = extractSetterFromEvent(event);
+    
+    if (!setterName) {
+        console.log('⚠️ Nome setter non trovato nell\'evento');
+        return;
+    }
+    
+    console.log(`🔍 Controllo genere per setter: ${setterName}`);
     
     // Controlla se genere già conosciuto
-    const gender = await window.AssistentiGender.check(nomeOperatore);
+    const gender = await window.AssistentiGender.check(setterName);
     
     if (gender) {
-        console.log(`✅ Genere già conosciuto: ${nomeOperatore} = ${gender}`);
+        console.log(`✅ Genere già conosciuto: ${setterName} = ${gender}`);
         // Imposta automaticamente il toggle button
         setAssistenteToggle(gender);
     } else {
-        console.log(`⚠️ Genere non conosciuto per: ${nomeOperatore}, mostro popup`);
+        console.log(`⚠️ Genere non conosciuto per: ${setterName}, mostro popup`);
         // Mostra popup per selezione genere
-        window.AssistentiGender.showPopup(nomeOperatore, (selectedGender) => {
-            console.log(`✅ Genere salvato: ${nomeOperatore} = ${selectedGender}`);
+        window.AssistentiGender.showPopup(setterName, (selectedGender) => {
+            console.log(`✅ Genere salvato: ${setterName} = ${selectedGender}`);
             // Imposta automaticamente il toggle button
             setAssistenteToggle(selectedGender);
         });
@@ -712,4 +732,8 @@ function setAssistenteToggle(gender) {
     }
 }
 
-console.log('✅ Google Auth v2.2.13 - OAuth universale + Drive scopes + Gender check');
+// Esporta funzioni per uso esterno
+window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
+window.extractSetterFromEvent = extractSetterFromEvent;
+
+console.log('✅ Google Auth v2.2.13 - OAuth universale + Drive scopes + Setter gender check');

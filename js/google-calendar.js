@@ -421,8 +421,10 @@ function fillFormFromEvent(event) {
     }
     document.getElementById('orario').value = orarioValue;
     
-    // RILEVAMENTO AUTOMATICO GENERE ASSISTENTE DAL NOME LEAD
-    detectGenderFromName(firstName);
+    // ✨ NUOVO: Controllo genere SETTER (non lead) per {YY}
+    if (window.checkSetterGenderFromEvent) {
+        window.checkSetterGenderFromEvent(event);
+    }
     
     // Aggiorna anteprima
     if (window.updatePreview) {
@@ -504,46 +506,10 @@ function extractServiceFromEvent(event) {
     };
 }
 
-// ===== RILEVA GENERE DA NOME (con database completo) =====
+// ===== RILEVA GENERE DA NOME SETTER (DEPRECATA - Ora usiamo Google Sheets) =====
+// Questa funzione non viene più usata, il genere viene gestito da google-sheets-assistenti.js
 function detectGenderFromName(name) {
-    if (!name) return;
-    
-    const nameLower = name.toLowerCase().trim();
-    
-    // Usa database nomi caricato da nomi-italiani.js
-    const nomiMaschili = window.NOMI_MASCHILI || [];
-    const nomiFemminili = window.NOMI_FEMMINILI || [];
-    
-    let gender = 'M'; // Default maschio
-    
-    // PRIORITÀ 1: Check database nomi
-    if (nomiFemminili.includes(nameLower)) {
-        gender = 'F';
-    } else if (nomiMaschili.includes(nameLower)) {
-        gender = 'M';
-    } else {
-        // PRIORITÀ 2: Euristiche per nomi non in lista
-        // Molti nomi femminili italiani finiscono con 'a'
-        if (nameLower.endsWith('a') && !nameLower.endsWith('ca')) {
-            gender = 'F';
-        }
-        // Alcuni pattern maschili
-        if (nameLower.endsWith('o') || nameLower.endsWith('e')) {
-            gender = 'M';
-        }
-    }
-    
-    // Imposta il toggle button
-    const toggleButtons = document.querySelectorAll('.toggle-btn[data-value]');
-    toggleButtons.forEach(btn => {
-        if (btn.dataset.value === gender) {
-            btn.classList.add('active');
-        } else {
-            btn.classList.remove('active');
-        }
-    });
-    
-    console.log(`🔍 Genere rilevato per "${name}": ${gender === 'M' ? 'Maschio' : 'Femmina'}`);
+    console.log('⚠️ detectGenderFromName deprecata - usa checkSetterGenderFromEvent');
 }
 
 // ===== MARCA LEAD COME CONTATTATO =====

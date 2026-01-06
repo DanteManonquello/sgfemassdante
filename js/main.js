@@ -59,12 +59,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     await loadLastMessageIndicator();
     await initDefaultDay();
     
-    // Carica cache assistenti (se Google loggato)
-    if (window.AssistentiGender && window.accessToken) {
-        console.log('🔄 Caricamento cache assistenti...');
-        await window.AssistentiGender.loadAll();
-    }
-    
     // Migrazione dati (se primo login)
     if (window.DriveStorage && window.accessToken) {
         setTimeout(() => window.DriveStorage.migrate(), 2000);
