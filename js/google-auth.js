@@ -410,12 +410,7 @@ function showUserInfo(userInfo) {
         }
     }
     
-    const headerAvatar = document.getElementById('headerAvatar');
-    if (headerAvatar) {
-        // Mantieni icona di default, non sovrascrivere con foto
-        // La foto profilo viene mostrata solo al centro della pagina
-        console.log('✅ Header avatar mantiene icona default');
-    }
+    // headerAvatar rimosso dall'HTML in v2.2.14 (solo foto centrale)
     
     if (userInfoDiv) {
         userInfoDiv.onclick = () => {
@@ -446,10 +441,7 @@ function hideUserInfo() {
         userInfoDiv.onclick = null;
     }
     
-    const headerAvatar = document.getElementById('headerAvatar');
-    if (headerAvatar) {
-        headerAvatar.innerHTML = '<i class="fas fa-user"></i>';
-    }
+    // headerAvatar rimosso dall'HTML in v2.2.14 (solo foto centrale)
     
     const operatoreName = document.getElementById('operatoreName');
     if (operatoreName) {
@@ -736,4 +728,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.2.13 - OAuth universale + Drive scopes + Setter gender check');
+console.log('✅ Google Auth v2.2.14 - OAuth universale + Drive scopes + Setter gender check');

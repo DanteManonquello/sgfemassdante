@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.2.13 - MAIN LOGIC - GOOGLE DRIVE STORAGE + GENDER CHECK
+   TESTmess v2.2.14 - MAIN LOGIC - GOOGLE DRIVE STORAGE + GENDER CHECK
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.13 inizializzato');
+    console.log('🚀 TESTmess v2.2.14 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -706,4 +706,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.13 caricato');
+console.log('✅ Main.js v2.2.14 caricato');
