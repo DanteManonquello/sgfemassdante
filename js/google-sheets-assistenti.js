@@ -1,6 +1,16 @@
 /* ================================================================================
-   GOOGLE SHEETS ASSISTENTI GENERE - v2.2.13
+   GOOGLE SHEETS ASSISTENTI GENERE - v2.2.18
    Sistema di apprendimento genere assistenti usando Google Sheets
+   
+   CHANGELOG v2.2.18:
+   - ✅ DEBUG logging completo per troubleshooting
+   - ✅ Fix Maria Teresa e altri nomi composti
+   
+   CHANGELOG v2.2.17:
+   - ✅ Rilevazione automatica genere da database nomi italiani
+   - ✅ Estrazione intelligente primo nome da stringhe composte
+   - ✅ Gestione nomi ambigui (es. Andrea)
+   - ✅ Popup solo per nomi sconosciuti (non in database E non in Sheets)
    ================================================================================ */
 
 // ===== CONFIGURAZIONE =====
@@ -170,24 +180,120 @@ async function saveAssistenteGenere(nome, genere) {
     }
 }
 
-// ===== CERCA GENERE ASSISTENTE =====
+// ===== ESTRAI PRIMO NOME DA STRINGA =====
+// Esempio: "Dante Davide" → "Dante"
+// Esempio: "Marco Antonio Rossi" → "Marco"
+function extractFirstName(fullName) {
+    if (!fullName || fullName.trim() === '') return null;
+    
+    // Pulisci e splitta per spazi
+    const parts = fullName.trim().split(/\s+/);
+    
+    // Se un solo nome, restituiscilo
+    if (parts.length === 1) {
+        return parts[0].toLowerCase();
+    }
+    
+    // Se più nomi, prendi il primo
+    // Verifica se il primo nome è nel database nomi italiani
+    const firstName = parts[0].toLowerCase();
+    
+    // Se il primo nome è nel database, usalo
+    if (window.NOMI_MASCHILI && window.NOMI_MASCHILI.includes(firstName)) {
+        return firstName;
+    }
+    if (window.NOMI_FEMMINILI && window.NOMI_FEMMINILI.includes(firstName)) {
+        return firstName;
+    }
+    
+    // Se non trovato, prova combinazioni di nomi composti
+    // Es. "Gian Luca" potrebbe essere "gianluca"
+    if (parts.length >= 2) {
+        const composto = (parts[0] + parts[1]).toLowerCase();
+        if (window.NOMI_MASCHILI && window.NOMI_MASCHILI.includes(composto)) {
+            return composto;
+        }
+        if (window.NOMI_FEMMINILI && window.NOMI_FEMMINILI.includes(composto)) {
+            return composto;
+        }
+    }
+    
+    // Default: restituisci il primo nome
+    return firstName;
+}
+
+// ===== RILEVA GENERE DA DATABASE NOMI ITALIANI =====
+function detectGenderFromItalianNames(nome) {
+    if (!nome || nome.trim() === '') return null;
+    
+    const nomeLower = extractFirstName(nome);
+    console.log(`🔍 [DEBUG] extractFirstName("${nome}") → "${nomeLower}"`);
+    
+    if (!nomeLower) return null;
+    
+    // Verifica disponibilità database
+    if (!window.NOMI_MASCHILI || !window.NOMI_FEMMINILI) {
+        console.warn('⚠️ Database nomi italiani non caricato');
+        return null;
+    }
+    
+    // Controlla se è un nome maschile
+    const isMaschio = window.NOMI_MASCHILI.includes(nomeLower);
+    const isFemmina = window.NOMI_FEMMINILI.includes(nomeLower);
+    
+    console.log(`🔍 [DEBUG] "${nomeLower}" → isMaschio: ${isMaschio}, isFemmina: ${isFemmina}`);
+    
+    // Gestione nomi ambigui (es. Andrea)
+    if (isMaschio && isFemmina) {
+        console.log(`⚠️ Nome ambiguo: ${nome} (sia M che F nel database)`);
+        return null; // Ritorna null per forzare il popup
+    }
+    
+    if (isMaschio) {
+        console.log(`✅ Genere rilevato automaticamente: ${nome} = M (database nomi italiani)`);
+        return 'M';
+    }
+    
+    if (isFemmina) {
+        console.log(`✅ Genere rilevato automaticamente: ${nome} = F (database nomi italiani)`);
+        return 'F';
+    }
+    
+    console.log(`⚠️ Nome non trovato in database nomi italiani: ${nome}`);
+    return null;
+}
+
+// ===== CERCA GENERE ASSISTENTE (INTELLIGENTE) =====
+// PRIORITÀ:
+// 1. Cache Google Sheets (nomi già salvati dall'utente)
+// 2. Database nomi italiani (rilevazione automatica)
+// 3. null (mostra popup e salva su Sheets)
 async function checkAssistenteGender(nome) {
     if (!nome || nome.trim() === '') return null;
     
     const nomeLower = nome.trim().toLowerCase();
     
-    // Se cache non caricata, caricala
+    // PRIORITÀ 1: Cache Google Sheets (nomi già salvati dall'utente)
     if (!genderCache) {
         await loadAllAssistenti();
     }
     
-    // Cerca in cache
     if (genderCache && genderCache[nomeLower]) {
-        console.log(`✅ Genere trovato in cache: ${nome} = ${genderCache[nomeLower]}`);
+        console.log(`✅ Genere trovato in cache Google Sheets: ${nome} = ${genderCache[nomeLower]}`);
         return genderCache[nomeLower];
     }
     
-    console.log(`⚠️ Genere non trovato per: ${nome}`);
+    // PRIORITÀ 2: Database nomi italiani (rilevazione automatica)
+    const detectedGender = detectGenderFromItalianNames(nome);
+    if (detectedGender) {
+        // IMPORTANTE: Salva automaticamente su Google Sheets per velocizzare prossime volte
+        console.log(`💾 Salvo automaticamente genere rilevato su Google Sheets: ${nome} = ${detectedGender}`);
+        await saveAssistenteGenere(nome, detectedGender);
+        return detectedGender;
+    }
+    
+    // PRIORITÀ 3: null (nome sconosciuto, mostra popup)
+    console.log(`⚠️ Genere non trovato per: ${nome} (né in cache né in database) - mostra popup`);
     return null;
 }
 
@@ -306,4 +412,4 @@ window.AssistentiGender = {
     loadAll: loadAllAssistenti
 };
 
-console.log('✅ Google Sheets Assistenti module v2.2.16 caricato');
+console.log('✅ Google Sheets Assistenti module v2.2.18 caricato');

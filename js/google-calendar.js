@@ -67,6 +67,7 @@ async function syncCalendarEvents(silent = false) {
         // STEP 2: Filtra SOLO i calendari desiderati
         const targetCalendarNames = [
             'SG - Call consulenza',
+            'SG - Call interne',
             'SG - Follow Up'
         ];
         
@@ -77,7 +78,7 @@ async function syncCalendarEvents(silent = false) {
         if (targetCalendars.length === 0) {
             console.warn('⚠️ Nessun calendario SG trovato');
             if (!silent) {
-                showNotification('⚠️ Calendari "SG - Call consulenza" e "SG - Follow Up" non trovati', 'warning');
+                showNotification('⚠️ Calendari "SG - Call consulenza", "SG - Call interne" e "SG - Follow Up" non trovati', 'warning');
             }
             return;
         }
@@ -242,11 +243,12 @@ function updateLeadSelectorByDate(dateString) {
         });
         
         const leadName = extractNameFromEvent(event);
+        const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
         const option = document.createElement('option');
         option.value = index;
         option.dataset.eventId = event.id;
         option.dataset.eventData = JSON.stringify(event);
-        option.textContent = `${eventTime} - ${leadName}`;
+        option.textContent = `${eventTime} - ${leadName}${calendarLabel}`;
         selectLead.appendChild(option);
     });
     
@@ -301,11 +303,12 @@ function updateLeadSelector(selectedDay) {
         });
         
         const leadName = extractNameFromEvent(event);
+        const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
         const option = document.createElement('option');
         option.value = index;
         option.dataset.eventId = event.id;
         option.dataset.eventData = JSON.stringify(event);
-        option.textContent = `${eventTime} - ${leadName}`;
+        option.textContent = `${eventTime} - ${leadName}${calendarLabel}`;
         selectLead.appendChild(option);
     });
 }

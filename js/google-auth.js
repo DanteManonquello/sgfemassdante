@@ -1,5 +1,17 @@
 /* ================================================================================
-   GOOGLE AUTH - VERSIONE 2.2.12
+   GOOGLE AUTH - VERSIONE 2.2.20
+   
+   CHANGELOG 2.2.20:
+   - ✅ FIX CRITICO: Priorità corretta estrazione setter
+   - ✅ "Nome setter:" in description PRIMA di "()" nel title
+   - ✅ Regex robusta case-insensitive con \r\n handling
+   
+   CHANGELOG 2.2.18:
+   - ✅ DEBUG logging completo per troubleshooting genere setter
+   
+   CHANGELOG 2.2.17:
+   - ✅ Rilevazione automatica genere setter da database nomi italiani
+   - ✅ Popup genere solo per nomi sconosciuti (intelligente)
    
    CHANGELOG 2.2.12:
    - ✅ CRITICO: Client ID universale per evitare redirect_uri_mismatch
@@ -422,7 +434,9 @@ function showUserInfo(userInfo) {
     
     const operatoreName = document.getElementById('operatoreName');
     if (operatoreName) {
-        operatoreName.textContent = userInfo.name;
+        // Estrai solo il primo nome (es. "Dante Davide" → "Dante")
+        const firstName = userInfo.name.split(' ')[0];
+        operatoreName.textContent = firstName;
     }
     
     localStorage.setItem('sgmess_operator_name', userInfo.name);
@@ -655,25 +669,58 @@ console.error = function(...args) {
 };
 
 // ===== ESTRAI NOME SETTER DA EVENTO =====
-// Esempio: "Fabio Marano: Hight Ticket (11-45K) (Dante)" → "Dante"
+// PRIORITÀ CORRETTA (dal più specifico al generico):
+// 1. "Nome setter:" nella descrizione (ACUITY FORMAT) ← PRIORITÀ MASSIMA
+// 2. "SETTER:" nella descrizione (fallback)
+// 3. "Assistente:" nella descrizione (fallback)
+// 4. Ultima parentesi nel titolo (OPERATORE, non setter - solo fallback estremo)
 function extractSetterFromEvent(event) {
     const summary = event.summary || '';
+    const description = event.description || '';
     
-    // Cerca l'ultimo testo tra parentesi (che dovrebbe essere il nome del setter)
+    console.log(`🔍 [DEBUG] extractSetterFromEvent`);
+    console.log(`  Summary: "${summary}"`);
+    console.log(`  Description (primi 500 char): "${description.substring(0, 500)}"`);
+    
+    // PRIORITÀ 1: "Nome setter:" nella descrizione (FORMATO ACUITY)
+    // Regex case-insensitive con spazi flessibili
+    const nomeSetterMatch = description.match(/Nome\s+setter:\s*([^\n\r]+)/i);
+    if (nomeSetterMatch) {
+        const setterName = nomeSetterMatch[1].trim();
+        console.log(`✅ [DEBUG] Nome setter trovato in descrizione (Nome setter:): "${setterName}"`);
+        return setterName;
+    }
+    
+    // PRIORITÀ 2: "SETTER:" nella descrizione (formato generico)
+    const setterMatch = description.match(/SETTER:\s*([^\n\r]+)/i);
+    if (setterMatch) {
+        const setterName = setterMatch[1].trim();
+        console.log(`✅ [DEBUG] Nome setter trovato in descrizione (SETTER:): "${setterName}"`);
+        return setterName;
+    }
+    
+    // PRIORITÀ 3: "Assistente:" nella descrizione
+    const assistenteMatch = description.match(/Assistente:\s*([^\n\r]+)/i);
+    if (assistenteMatch) {
+        const setterName = assistenteMatch[1].trim();
+        console.log(`✅ [DEBUG] Nome setter trovato in descrizione (Assistente:): "${setterName}"`);
+        return setterName;
+    }
+    
+    // PRIORITÀ 4: Ultima parentesi nel titolo (FALLBACK - probabilmente è l'operatore)
     const matches = summary.match(/\(([^)]+)\)/g);
-    
     if (matches && matches.length > 0) {
-        // Prendi l'ultima parentesi (dovrebbe contenere il nome setter)
         const lastMatch = matches[matches.length - 1];
         const setterName = lastMatch.replace(/[()]/g, '').trim();
         
         // Verifica che sia un nome (non numeri o altri metadati)
-        // Se contiene solo lettere e spazi, probabilmente è un nome
-        if (/^[a-zA-Z\s]+$/.test(setterName)) {
+        if (/^[a-zA-Z\sàèéìòù]+$/.test(setterName)) {
+            console.log(`⚠️ [DEBUG] FALLBACK: Nome estratto da parentesi titolo (potrebbe essere operatore): "${setterName}"`);
             return setterName;
         }
     }
     
+    console.log(`❌ [DEBUG] Nessun nome setter trovato`);
     return null;
 }
 
@@ -691,20 +738,23 @@ async function checkSetterGenderFromEvent(event) {
     
     console.log(`🔍 Controllo genere per setter: ${setterName}`);
     
-    // Controlla se genere già conosciuto nella cache
+    // Controlla genere con rilevazione intelligente:
+    // 1. Cache Google Sheets
+    // 2. Database nomi italiani
+    // 3. null (mostra popup)
     const gender = await window.AssistentiGender.check(setterName);
     
     if (gender) {
-        console.log(`✅ Genere già conosciuto: ${setterName} = ${gender}`);
+        console.log(`✅ Genere rilevato: ${setterName} = ${gender}`);
         // Imposta automaticamente il toggle button
         setAssistenteToggle(gender);
     } else {
-        // FALLBACK: Usa genere Maschio come default (NON mostrare popup)
-        console.log(`⚠️ Genere non conosciuto per: ${setterName}, uso Maschio come default`);
-        setAssistenteToggle('M');
-        
-        // Salva automaticamente in background per prossima volta
-        window.AssistentiGender.save(setterName, 'M');
+        // Nome sconosciuto: mostra popup per chiedere all'utente
+        console.log(`❓ Genere sconosciuto per: ${setterName} - mostro popup`);
+        window.AssistentiGender.showPopup(setterName, (selectedGender) => {
+            console.log(`✅ Utente ha selezionato: ${setterName} = ${selectedGender}`);
+            setAssistenteToggle(selectedGender);
+        });
     }
 }
 
