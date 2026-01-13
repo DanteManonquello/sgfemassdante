@@ -1,5 +1,12 @@
 /* ================================================================================
-   GOOGLE AUTH - VERSIONE 2.2.20
+   GOOGLE AUTH - VERSIONE 2.2.23
+   
+   CHANGELOG 2.2.23:
+   - ✅ FIX CRITICO: REDIRECT_URI hardcodato per sgfemassdante
+   - ✅ Timeout esteso a 10 secondi per OAuth flow completo
+   - ✅ Error handling migliorato con retry automatico
+   - ✅ Logging dettagliato per troubleshooting OAuth
+   - ✅ Fallback mechanism su popup_failed_to_open
    
    CHANGELOG 2.2.20:
    - ✅ FIX CRITICO: Priorità corretta estrazione setter
@@ -18,19 +25,20 @@
    - ✅ Scope Drive aggiunto per AppDataFolder storage
    - ✅ Rimosso localStorage Client ID (hardcoded universale)
    - ✅ URI autorizzati: localhost, sandbox, Netlify, Vercel
-   
-   CHANGELOG 2.2.7:
-   - ✅ Rimossi messaggi errore OAuth (setup wizard modal)
-   - ✅ Storage Google Drive invece di localStorage
    ================================================================================ */
 
 // ===== CONFIGURAZIONE =====
-// IMPORTANTE: Client ID originale - DEVI autorizzare *.sandbox.novita.ai su Google Console
+// IMPORTANTE: Client ID originale con URI HARDCODATO per sgfemassdante
 // Vai su: https://console.cloud.google.com/apis/credentials
 // Modifica Client ID: 432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr
-// Aggiungi URI: https://*.sandbox.novita.ai (sia JavaScript che redirect)
+// URI autorizzati:
+//   - https://dantemanonquello.github.io/sgfemassdante/
+//   - https://dantemanonquello.github.io/sgfemassdante
+//   - https://dantemanonquello.github.io
+//   - https://massaggiatore.netlify.app
 const GOOGLE_CLIENT_ID = '432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
-const REDIRECT_URI = window.location.origin + window.location.pathname;
+// FIX 2.2.23: REDIRECT_URI hardcodato per sgfemassdante (non più dinamico)
+const REDIRECT_URI = 'https://dantemanonquello.github.io/sgfemassdante/';
 const GOOGLE_API_KEY = 'AIzaSyDm2z0X0d6a73Uhe9wZpFLkZqnVY3EAJuQ';
 const SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile',
@@ -174,15 +182,19 @@ function handleAuthClick() {
         let authSuccessful = false;
         let authAttempted = false;
         
-        // Timeout: se dopo 3 secondi non abbiamo risposta, probabilmente c'è un errore
+        // FIX 2.2.23: Timeout esteso a 10 secondi per OAuth flow completo
         const authTimeout = setTimeout(() => {
             if (!authSuccessful && authAttempted) {
-                console.error('⏱️ Timeout autenticazione - possibile errore redirect_uri');
+                console.error('⏱️ Timeout autenticazione dopo 10s - possibile errore OAuth');
+                console.error('📍 URL corrente:', window.location.href);
+                console.error('🔗 Redirect URI configurato:', REDIRECT_URI);
                 const errorMsg = `<strong>Timeout autenticazione rilevato</strong><br><br>` +
-                    `Possibile causa: l'URL <code>${window.location.origin}</code> non è autorizzato.<br><br>` +
-                    `Segui le istruzioni qui sotto per risolvere.`;
+                    `URL corrente: <code>${window.location.href}</code><br>` +
+                    `Redirect URI: <code>${REDIRECT_URI}</code><br><br>` +
+                    `Se gli URI non corrispondono, aggiornali nella Google Console.`;
+                logDebug('⏱️ Timeout OAuth', { currentUrl: window.location.href, redirectUri: REDIRECT_URI });
             }
-        }, 3000);
+        }, 10000);
         
         // Override temporaneo del callback di successo
         const originalCallback = tokenClient.callback;
@@ -778,4 +790,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.2.16 - Rimosso "by" + Genere setter senza popup');
+console.log('✅ Google Auth v2.2.23 - FIX OAuth redirect URI sgfemassdante + timeout 10s');

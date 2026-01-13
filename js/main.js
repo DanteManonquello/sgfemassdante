@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.2.16 - MAIN LOGIC - NO POPUP GENERE + BY RIMOSSO
+   TESTmess v2.2.23 - FIX OAuth sgfemassdante + timeout 10s
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.16 inizializzato');
+    console.log('🚀 TESTmess v2.2.23 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -712,4 +712,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.15 caricato');
+console.log('✅ Main.js v2.2.23 caricato');
