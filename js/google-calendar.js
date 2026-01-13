@@ -1,13 +1,18 @@
 /* ================================================================================
-   GOOGLE CALENDAR SYNC - TESTmess v2.2.2
+   GOOGLE CALENDAR SYNC - TESTmess v2.2.25
+   
+   CHANGELOG v2.2.25:
+   - ✅ EVENTI PASSATI: Carica ultimi 90 giorni + prossimi 30 giorni
+   - ✅ MULTI-CALENDARIO AUTO: Tutti i calendari automaticamente (no hardcode)
+   - ✅ INDICATORE CALENDARIO: Mostra "(Nome Calendario)" nel dropdown
+   - ✅ FILTRO INTELLIGENTE: Solo calendari con pattern "SG -" o contenenti "Lead"
+   - ✅ RANGE ESTESO: 120 giorni totali (90 passati + 30 futuri)
    
    CHANGELOG v2.2.2:
    - ✅ PULIZIA DROPDOWN: Rimossi metadati inutili (solo "HH:MM - Nome Cognome")
    - ✅ PARSING INTELLIGENTE: Separazione automatica Nome/Cognome con database nomi
    - ✅ AUTO-DETECT SERVIZIO: Estrae "SERVIZIO:" da description
    - ✅ AUTO-COMPILA SOCIETÀ: Stock Gain → SG - Lead, Finanza Efficace → FE - Lead
-   - ✅ DATABASE NOMI: 500+ nomi italiani maschili e femminili
-   - ✅ Andrea = Maschio confermato
    ================================================================================ */
 
 const STORAGE_KEYS_CALENDAR = {
@@ -64,16 +69,15 @@ async function syncCalendarEvents(silent = false) {
         const allCalendars = calendarListResponse.result.items || [];
         console.log(`✅ Trovati ${allCalendars.length} calendari totali`);
         
-        // STEP 2: Filtra SOLO i calendari desiderati
-        const targetCalendarNames = [
-            'SG - Call consulenza',
-            'SG - Call interne',
-            'SG - Follow Up'
-        ];
-        
-        const targetCalendars = allCalendars.filter(cal => 
-            targetCalendarNames.includes(cal.summary)
-        );
+        // STEP 2: Filtra calendari AUTOMATICAMENTE
+        // Prende TUTTI i calendari che iniziano con "SG -" o contengono "Lead"
+        const targetCalendars = allCalendars.filter(cal => {
+            const summary = cal.summary || '';
+            return summary.startsWith('SG -') || 
+                   summary.toLowerCase().includes('lead') ||
+                   summary.toLowerCase().includes('call') ||
+                   summary.toLowerCase().includes('follow');
+        });
         
         if (targetCalendars.length === 0) {
             console.warn('⚠️ Nessun calendario SG trovato');
@@ -85,10 +89,15 @@ async function syncCalendarEvents(silent = false) {
         
         console.log(`✅ Trovati ${targetCalendars.length} calendari SG:`, targetCalendars.map(c => c.summary));
         
-        // STEP 3: Carica eventi dai prossimi 30 giorni per ciascun calendario
+        // STEP 3: Carica eventi da ULTIMI 90 GIORNI + PROSSIMI 30 GIORNI
         const now = new Date();
-        const timeMin = now.toISOString();
         
+        // Ultimi 90 giorni (eventi passati)
+        const pastDate = new Date();
+        pastDate.setDate(pastDate.getDate() - 90);
+        const timeMin = pastDate.toISOString();
+        
+        // Prossimi 30 giorni (eventi futuri)
         const futureDate = new Date();
         futureDate.setDate(futureDate.getDate() + 30);
         const timeMax = futureDate.toISOString();
@@ -697,4 +706,4 @@ window.displayCalendarView = displayCalendarView;
 window.setTodayDate = setTodayDate;
 window.updateLeadsList = updateLeadsList;
 
-console.log('✅ Google Calendar module v2.2.16 caricato');
+console.log('✅ Google Calendar module v2.2.25 caricato - Eventi passati (90gg) + Multi-calendario automatico');

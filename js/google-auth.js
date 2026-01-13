@@ -795,4 +795,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.2.24 - FIX DEFINITIVO: Nuovo Client ID OAuth dedicato');
+console.log('✅ Google Auth v2.2.25 - OAuth funzionante');
