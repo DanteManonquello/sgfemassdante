@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.dev.vars
+
+# Build output
+dist/
+.wrangler/
+
+# Logs
+*.log
+logs/
+*.pid
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Backup files
+*.backup
+*.bak
+*.tar.gz
+*.zip
+
+# Google credentials
+credentials.json
+token.json
