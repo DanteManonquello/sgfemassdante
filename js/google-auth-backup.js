@@ -3,7 +3,7 @@
    ================================================================================ */
 
 // ⚠️ IMPORTANTE: Credenziali Google Cloud configurate
-const GOOGLE_CLIENT_ID = '432043907250-blb72vqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
 const GOOGLE_API_KEY = ''; // Non necessaria per OAuth 2.0
 
 const SCOPES = 'https://www.googleapis.com/auth/contacts https://www.googleapis.com/auth/calendar.readonly';

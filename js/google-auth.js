@@ -27,9 +27,9 @@
 // ===== CONFIGURAZIONE =====
 // IMPORTANTE: Client ID originale - DEVI autorizzare *.sandbox.novita.ai su Google Console
 // Vai su: https://console.cloud.google.com/apis/credentials
-// Modifica Client ID: 432043907250-blb72vqc0nqm8rccoknfe29p4j5lbubr
+// Modifica Client ID: 432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr
 // Aggiungi URI: https://*.sandbox.novita.ai (sia JavaScript che redirect)
-const GOOGLE_CLIENT_ID = '432043907250-blb72vqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
 const REDIRECT_URI = window.location.origin;
 const GOOGLE_API_KEY = 'AIzaSyDm2z0X0d6a73Uhe9wZpFLkZqnVY3EAJuQ';
 const SCOPES = [

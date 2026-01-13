@@ -4,7 +4,7 @@
    ================================================================================ */
 
 // ⚠️ Credenziali
-const GOOGLE_CLIENT_ID = '432043907250-blb72vqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
 const GOOGLE_API_KEY = 'AIzaSyDm2z0X0d6a73Uhe9wZpFLkZqnVY3EAJuQ';
 const SCOPES = 'https://www.googleapis.com/auth/contacts https://www.googleapis.com/auth/calendar.readonly';
 
