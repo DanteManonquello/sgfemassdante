@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.2.23 - FIX OAuth sgfemassdante + timeout 10s
+   TESTmess v2.2.24 - FIX DEFINITIVO: Nuovo Client ID OAuth
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.23 inizializzato');
+    console.log('🚀 TESTmess v2.2.24 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -712,4 +712,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.23 caricato');
+console.log('✅ Main.js v2.2.24 caricato');

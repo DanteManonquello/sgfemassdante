@@ -1,5 +1,11 @@
 /* ================================================================================
-   GOOGLE AUTH - VERSIONE 2.2.23
+   GOOGLE AUTH - VERSIONE 2.2.24
+   
+   CHANGELOG 2.2.24:
+   - ✅ FIX DEFINITIVO: Nuovo Client ID OAuth dedicato al progetto
+   - ✅ Client ID: 432043907250-1p21bdmnebrjfa541kik7eosork5etpe
+   - ✅ Origin autorizzato: https://dantemanonquello.github.io
+   - ✅ Redirect URI: https://dantemanonquello.github.io/sgfemassdante/
    
    CHANGELOG 2.2.23:
    - ✅ FIX CRITICO: REDIRECT_URI hardcodato per sgfemassdante
@@ -28,15 +34,14 @@
    ================================================================================ */
 
 // ===== CONFIGURAZIONE =====
-// IMPORTANTE: Client ID originale con URI HARDCODATO per sgfemassdante
-// Vai su: https://console.cloud.google.com/apis/credentials
-// Modifica Client ID: 432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr
-// URI autorizzati:
-//   - https://dantemanonquello.github.io/sgfemassdante/
-//   - https://dantemanonquello.github.io/sgfemassdante
+// IMPORTANTE: Client ID OAuth DEDICATO al progetto "Massaggiatore GitHub1 20260113"
+// Progetto: Massaggiatore
+// Creato: 13 gennaio 2026
+// URI JavaScript autorizzati:
 //   - https://dantemanonquello.github.io
-//   - https://massaggiatore.netlify.app
-const GOOGLE_CLIENT_ID = '432043907250-bfb7zvqc0nqm8rccoknfe29p4j5lbubr.apps.googleusercontent.com';
+// URI di reindirizzamento autorizzati:
+//   - (verranno aggiunti automaticamente dalla schermata di consenso)
+const GOOGLE_CLIENT_ID = '432043907250-1p21bdmnebrjfa541kik7eosork5etpe.apps.googleusercontent.com';
 // FIX 2.2.23: REDIRECT_URI hardcodato per sgfemassdante (non più dinamico)
 const REDIRECT_URI = 'https://dantemanonquello.github.io/sgfemassdante/';
 const GOOGLE_API_KEY = 'AIzaSyDm2z0X0d6a73Uhe9wZpFLkZqnVY3EAJuQ';
@@ -790,4 +795,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.2.23 - FIX OAuth redirect URI sgfemassdante + timeout 10s');
+console.log('✅ Google Auth v2.2.24 - FIX DEFINITIVO: Nuovo Client ID OAuth dedicato');

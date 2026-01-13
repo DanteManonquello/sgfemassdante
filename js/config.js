@@ -5,11 +5,11 @@
 // Configurazione centralizzata della versione
 const APP_CONFIG = {
     name: 'TESTmess',
-    version: '2.2.23',
-    fullName: 'v2.2.23 by Dante',
+    version: '2.2.24',
+    fullName: 'v2.2.24 by Dante',
     description: 'Stock Gain Messenger',
     author: 'Dante',
-    lastUpdate: '2026-01-13 - FIX: OAuth redirect URI hardcodato per sgfemassdante + timeout 10s'
+    lastUpdate: '2026-01-13 - FIX DEFINITIVO: Nuovo Client ID OAuth dedicato al progetto'
 };
 
 // Esporta per uso globale
