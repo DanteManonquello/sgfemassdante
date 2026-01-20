@@ -1,5 +1,5 @@
 /* ================================================================================
-   GOOGLE CALENDAR SYNC - TESTmess v2.2.25
+   GOOGLE CALENDAR SYNC - TESTmess v2.2.26
    
    CHANGELOG v2.2.25:
    - ✅ EVENTI PASSATI: Carica ultimi 90 giorni + prossimi 30 giorni
@@ -225,26 +225,36 @@ function updateLeadSelectorByDate(dateString) {
         return eventDate.toDateString() === selectedDate.toDateString();
     });
     
-    // Filtra lead già contattati
-    const availableLeads = dayEvents.filter(event => {
-        return !contactedLeads.some(contacted => 
+    // Separa lead contattati e non contattati
+    const availableLeads = [];
+    const contactedLeadsForDay = [];
+    
+    dayEvents.forEach(event => {
+        const isContacted = contactedLeads.some(contacted => 
             contacted.eventId === event.id || 
             (contacted.nome === extractNameFromEvent(event) && 
              new Date(contacted.timestamp).toDateString() === selectedDate.toDateString())
         );
+        
+        if (isContacted) {
+            contactedLeadsForDay.push(event);
+        } else {
+            availableLeads.push(event);
+        }
     });
     
     // Popola select
     selectLead.innerHTML = '<option value="">-- Seleziona lead --</option>';
     
-    if (availableLeads.length === 0) {
-        selectLead.innerHTML = '<option value="">-- Nessun lead disponibile per questo giorno --</option>';
+    if (dayEvents.length === 0) {
+        selectLead.innerHTML = '<option value="">-- Nessun appuntamento per questo giorno --</option>';
         selectLead.disabled = true;
         return;
     }
     
     selectLead.disabled = false;
     
+    // PRIMA: Lead NON contattati (in nero normale)
     availableLeads.forEach((event, index) => {
         const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
             hour: '2-digit', 
@@ -261,7 +271,37 @@ function updateLeadSelectorByDate(dateString) {
         selectLead.appendChild(option);
     });
     
-    console.log(`✅ Trovati ${availableLeads.length} lead per ${dateString}`);
+    // DIVIDER se ci sono lead contattati
+    if (contactedLeadsForDay.length > 0) {
+        const divider = document.createElement('option');
+        divider.disabled = true;
+        divider.textContent = '━━━━━ Già contattati ━━━━━';
+        divider.style.textAlign = 'center';
+        divider.style.color = '#999';
+        divider.style.fontStyle = 'italic';
+        selectLead.appendChild(divider);
+    }
+    
+    // POI: Lead CONTATTATI (in grigio con checkmark)
+    contactedLeadsForDay.forEach((event, index) => {
+        const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const leadName = extractNameFromEvent(event);
+        const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
+        const option = document.createElement('option');
+        option.value = availableLeads.length + index;
+        option.dataset.eventId = event.id;
+        option.dataset.eventData = JSON.stringify(event);
+        option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
+        option.style.color = '#888';
+        option.style.fontStyle = 'italic';
+        selectLead.appendChild(option);
+    });
+    
+    console.log(`✅ Trovati ${availableLeads.length} lead disponibili e ${contactedLeadsForDay.length} già contattati per ${dateString}`);
 }
 
 // ===== MANTIENI FUNZIONE ORIGINALE PER COMPATIBILITÀ =====
@@ -284,27 +324,36 @@ function updateLeadSelector(selectedDay) {
         return dateKey === selectedDay;
     });
     
-    // Filtra lead già contattati
-    const availableLeads = dayEvents.filter(event => {
-        // Controlla se il lead è già stato contattato
-        return !contactedLeads.some(contacted => 
+    // Separa lead contattati e non contattati
+    const availableLeads = [];
+    const contactedLeadsForDay = [];
+    
+    dayEvents.forEach(event => {
+        const isContacted = contactedLeads.some(contacted => 
             contacted.eventId === event.id || 
             (contacted.nome === extractNameFromEvent(event) && 
              contacted.date === event.start)
         );
+        
+        if (isContacted) {
+            contactedLeadsForDay.push(event);
+        } else {
+            availableLeads.push(event);
+        }
     });
     
     // Popola select
     selectLead.innerHTML = '<option value="">-- Seleziona lead --</option>';
     
-    if (availableLeads.length === 0) {
-        selectLead.innerHTML = '<option value="">-- Tutti i lead sono stati contattati --</option>';
+    if (dayEvents.length === 0) {
+        selectLead.innerHTML = '<option value="">-- Nessun appuntamento per questo giorno --</option>';
         selectLead.disabled = true;
         return;
     }
     
     selectLead.disabled = false;
     
+    // PRIMA: Lead NON contattati
     availableLeads.forEach((event, index) => {
         const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
             hour: '2-digit', 
@@ -318,6 +367,36 @@ function updateLeadSelector(selectedDay) {
         option.dataset.eventId = event.id;
         option.dataset.eventData = JSON.stringify(event);
         option.textContent = `${eventTime} - ${leadName}${calendarLabel}`;
+        selectLead.appendChild(option);
+    });
+    
+    // DIVIDER se ci sono lead contattati
+    if (contactedLeadsForDay.length > 0) {
+        const divider = document.createElement('option');
+        divider.disabled = true;
+        divider.textContent = '━━━━━ Già contattati ━━━━━';
+        divider.style.textAlign = 'center';
+        divider.style.color = '#999';
+        divider.style.fontStyle = 'italic';
+        selectLead.appendChild(divider);
+    }
+    
+    // POI: Lead CONTATTATI (in grigio con checkmark)
+    contactedLeadsForDay.forEach((event, index) => {
+        const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+        
+        const leadName = extractNameFromEvent(event);
+        const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
+        const option = document.createElement('option');
+        option.value = availableLeads.length + index;
+        option.dataset.eventId = event.id;
+        option.dataset.eventData = JSON.stringify(event);
+        option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
+        option.style.color = '#888';
+        option.style.fontStyle = 'italic';
         selectLead.appendChild(option);
     });
 }
@@ -706,4 +785,4 @@ window.displayCalendarView = displayCalendarView;
 window.setTodayDate = setTodayDate;
 window.updateLeadsList = updateLeadsList;
 
-console.log('✅ Google Calendar module v2.2.25 caricato - Eventi passati (90gg) + Multi-calendario automatico');
+console.log('✅ Google Calendar module v2.2.26 caricato - Lead colorati + Eventi passati (90gg) + Multi-calendario automatico');

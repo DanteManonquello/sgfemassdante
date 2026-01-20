@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.2.25 - Calendario: Eventi passati + Multi-calendario
+   TESTmess v2.2.26 - Lead colorati + Cronologia persistente + Date navigation
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.25 inizializzato');
+    console.log('🚀 TESTmess v2.2.26 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -192,6 +192,49 @@ async function setupEventListeners() {
     document.getElementById('decreaseTime30m').addEventListener('click', async () => await adjustTime(-30));
     document.getElementById('increaseTime30m').addEventListener('click', async () => await adjustTime(30));
     document.getElementById('increaseTime1h').addEventListener('click', async () => await adjustTime(60));
+    
+    // Date navigation buttons (±90 giorni limite)
+    const prevDayBtn = document.getElementById('prevDayBtn');
+    const nextDayBtn = document.getElementById('nextDayBtn');
+    const selectDay = document.getElementById('selectDay');
+    
+    if (prevDayBtn && nextDayBtn && selectDay) {
+        prevDayBtn.addEventListener('click', () => {
+            if (!selectDay.value) return;
+            
+            const currentDate = new Date(selectDay.value + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Limite: non oltre 90 giorni nel passato
+            const minDate = new Date(today);
+            minDate.setDate(minDate.getDate() - 90);
+            
+            if (currentDate > minDate) {
+                currentDate.setDate(currentDate.getDate() - 1);
+                selectDay.value = currentDate.toISOString().split('T')[0];
+                selectDay.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        nextDayBtn.addEventListener('click', () => {
+            if (!selectDay.value) return;
+            
+            const currentDate = new Date(selectDay.value + 'T00:00:00');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Limite: non oltre 90 giorni nel futuro
+            const maxDate = new Date(today);
+            maxDate.setDate(maxDate.getDate() + 90);
+            
+            if (currentDate < maxDate) {
+                currentDate.setDate(currentDate.getDate() + 1);
+                selectDay.value = currentDate.toISOString().split('T')[0];
+                selectDay.dispatchEvent(new Event('change'));
+            }
+        });
+    }
     
     // Action buttons
     document.getElementById('inviaMessaggio').addEventListener('click', async () => await sendToWhatsApp());
@@ -505,8 +548,34 @@ function showNotification(text, type = 'success') {
 
 // ===== CRONOLOGIA =====
 async function saveToCronologia(nome, cognome, telefono, messaggio) {
-    const cronologia = JSON.parse((await getStorageItem(STORAGE_KEYS.CRONOLOGIA)) || '[]');
+    // STEP 1: Carica cronologia esistente (priorità Drive, fallback localStorage)
+    let cronologia = [];
     
+    // Prova a caricare da Drive
+    if (window.DriveStorage && window.accessToken) {
+        try {
+            const driveData = await window.DriveStorage.load(STORAGE_KEYS.CRONOLOGIA);
+            if (driveData) {
+                cronologia = driveData;
+            }
+        } catch (error) {
+            console.warn('⚠️ Drive non disponibile, uso localStorage:', error);
+        }
+    }
+    
+    // Fallback: localStorage
+    if (cronologia.length === 0) {
+        const localData = localStorage.getItem('CRONOLOGIA_BACKUP');
+        if (localData) {
+            try {
+                cronologia = JSON.parse(localData);
+            } catch (e) {
+                cronologia = [];
+            }
+        }
+    }
+    
+    // STEP 2: Aggiungi nuovo entry
     const entry = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
@@ -518,11 +587,29 @@ async function saveToCronologia(nome, cognome, telefono, messaggio) {
     
     cronologia.unshift(entry);
     
-    if (cronologia.length > 100) {
-        cronologia.pop();
+    // STEP 3: Limite 1000 messaggi
+    if (cronologia.length > 1000) {
+        cronologia = cronologia.slice(0, 1000);
     }
     
-    await setStorageItem(STORAGE_KEYS.CRONOLOGIA, JSON.stringify(cronologia));
+    // STEP 4: Salva su entrambi i storage
+    // 4a) Salva su Drive (principale)
+    if (window.DriveStorage && window.accessToken) {
+        try {
+            await window.DriveStorage.save(STORAGE_KEYS.CRONOLOGIA, cronologia);
+            console.log('✅ Cronologia salvata su Drive:', cronologia.length, 'messaggi');
+        } catch (error) {
+            console.error('❌ Errore salvataggio Drive:', error);
+        }
+    }
+    
+    // 4b) Salva su localStorage (cache locale)
+    try {
+        localStorage.setItem('CRONOLOGIA_BACKUP', JSON.stringify(cronologia));
+        console.log('✅ Cronologia salvata su localStorage (backup)');
+    } catch (error) {
+        console.warn('⚠️ localStorage pieno, salto backup locale');
+    }
     
     // Marca lead come contattato se selezionato da calendario
     markLeadAsContactedFromCalendar(nome, cognome, telefono);
@@ -565,7 +652,35 @@ function markLeadAsContactedFromCalendar(nome, cognome, telefono) {
 }
 
 async function loadCronologia() {
-    const cronologia = JSON.parse((await getStorageItem(STORAGE_KEYS.CRONOLOGIA)) || '[]');
+    // STEP 1: Carica cronologia (priorità Drive, fallback localStorage)
+    let cronologia = [];
+    
+    // Prova a caricare da Drive
+    if (window.DriveStorage && window.accessToken) {
+        try {
+            const driveData = await window.DriveStorage.load(STORAGE_KEYS.CRONOLOGIA);
+            if (driveData) {
+                cronologia = driveData;
+                console.log('✅ Cronologia caricata da Drive:', cronologia.length, 'messaggi');
+            }
+        } catch (error) {
+            console.warn('⚠️ Drive non disponibile:', error);
+        }
+    }
+    
+    // Fallback: localStorage
+    if (cronologia.length === 0) {
+        const localData = localStorage.getItem('CRONOLOGIA_BACKUP');
+        if (localData) {
+            try {
+                cronologia = JSON.parse(localData);
+                console.log('✅ Cronologia caricata da localStorage:', cronologia.length, 'messaggi');
+            } catch (e) {
+                cronologia = [];
+            }
+        }
+    }
+    
     const listContainer = document.getElementById('cronologiaList');
     
     if (cronologia.length === 0) {
@@ -712,4 +827,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.25 caricato');
+console.log('✅ Main.js v2.2.26 caricato');

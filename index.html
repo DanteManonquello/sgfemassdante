@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>v2.2.24 by Dante - Stock Gain Messenger</title>
+    <title>v2.2.26 by Dante - Stock Gain Messenger</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -58,7 +58,7 @@
             <div class="header-content">
                 <!-- Titolo e Nome Operatore -->
                 <div class="header-text">
-                    <h1 class="header-title">v2.2.24 by Dante</h1>
+                    <h1 class="header-title">v2.2.26 by Dante</h1>
                     <p class="header-subtitle" id="operatoreName">Stock Gain Messenger</p>
                 </div>
                 
@@ -101,7 +101,15 @@
                     <label for="selectDay">
                         <i class="fas fa-calendar"></i> Seleziona Giorno
                     </label>
-                    <input type="date" id="selectDay" class="form-control date-picker">
+                    <div class="date-controls" style="display: flex; gap: 8px; align-items: center;">
+                        <button type="button" class="btn-icon" id="prevDayBtn" title="Giorno precedente">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <input type="date" id="selectDay" class="form-control date-picker" style="flex: 1;">
+                        <button type="button" class="btn-icon" id="nextDayBtn" title="Giorno successivo">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="selectLead">
@@ -521,14 +529,14 @@
     </button>
 
     <!-- Scripts -->
-    <script src="js/nomi-italiani.js?v=2.2.25"></script>
-    <script src="js/config.js?v=2.2.25"></script>
-    <script src="js/google-auth.js?v=2.2.25"></script>
-    <script src="js/google-drive-storage.js?v=2.2.25"></script>
-    <script src="js/google-sheets-assistenti.js?v=2.2.25"></script>
-    <script src="js/google-calendar.js?v=2.2.25"></script>
-    <script src="js/templates.js?v=2.2.25"></script>
-    <script src="js/main.js?v=2.2.25"></script>
+    <script src="js/nomi-italiani.js?v=2.2.26"></script>
+    <script src="js/config.js?v=2.2.26"></script>
+    <script src="js/google-auth.js?v=2.2.26"></script>
+    <script src="js/google-drive-storage.js?v=2.2.26"></script>
+    <script src="js/google-sheets-assistenti.js?v=2.2.26"></script>
+    <script src="js/google-calendar.js?v=2.2.26"></script>
+    <script src="js/templates.js?v=2.2.26"></script>
+    <script src="js/main.js?v=2.2.26"></script>
     
     <!-- Google API Initialization -->
     <script>
