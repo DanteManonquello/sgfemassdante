@@ -5,8 +5,8 @@
 // Configurazione centralizzata della versione
 const APP_CONFIG = {
     name: 'TESTmess',
-    version: '2.2.27',
-    fullName: 'v2.2.27 by Dante',
+    version: '2.2.28',
+    fullName: 'v2.2.28 by Dante',
     description: 'Stock Gain Messenger',
     author: 'Dante',
     lastUpdate: '2026-01-20 - Rubrica contatti + Auto-push GitHub + SG Collega'
