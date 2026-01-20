@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.26 inizializzato');
+    console.log('🚀 TESTmess v2.2.27 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -58,6 +58,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     await updatePreview();
     await loadLastMessageIndicator();
     await initDefaultDay();
+    
+    // Inizializza nuovi moduli v2.2.27
+    if (window.initRubrica) {
+        window.initRubrica();
+    }
+    if (window.initGitHubAutoPush) {
+        window.initGitHubAutoPush();
+    }
     
     // Migrazione dati (se primo login)
     if (window.DriveStorage && window.accessToken) {
@@ -117,6 +125,7 @@ async function showPage(page) {
         'calendario': 'calendarioContent',
         'messaggi': 'messaggiContent',
         'cronologia': 'cronologiaContent',
+        'rubrica': 'rubricaContent',
         'importante': 'importanteContent'
     };
     
@@ -135,6 +144,8 @@ async function showPage(page) {
         if (page === 'cronologia') await loadCronologia();
         if (page === 'messaggi') loadMessaggiList();
         if (page === 'calendario' && window.displayCalendarView) displayCalendarView();
+        if (page === 'rubrica' && window.renderRubricaList) window.renderRubricaList();
+        if (page === 'importante' && window.updatePushStatus) window.updatePushStatus();
     }
 }
 
@@ -394,6 +405,7 @@ async function generateMessage(e) {
     const nome = document.getElementById('nome').value.trim();
     const cognome = document.getElementById('cognome').value.trim();
     const telefono = document.getElementById('telefono').value.trim();
+    const servizio = document.getElementById('servizio').value;
     const societa = getSocietaValue(); // USA LA NUOVA FUNZIONE
     
     if (!nome) {
@@ -408,8 +420,8 @@ async function generateMessage(e) {
     document.getElementById('outputMessaggio').textContent = messaggio;
     document.getElementById('outputCard').style.display = 'block';
     
-    // Salva in cronologia
-    saveToCronologia(nome, cognome, telefono, messaggio);
+    // Salva in cronologia (v2.2.27: con servizio e società)
+    saveToCronologia(nome, cognome, telefono, messaggio, servizio, societa);
     
     // Salva ultimo messaggio
     saveLastMessage(nome, cognome, telefono);
@@ -433,6 +445,7 @@ async function sendToWhatsApp() {
     const nome = document.getElementById('nome').value.trim();
     const cognome = document.getElementById('cognome').value.trim();
     let telefono = document.getElementById('telefono').value.trim();
+    const servizio = document.getElementById('servizio').value;
     const societa = getSocietaValue(); // USA LA NUOVA FUNZIONE
     
     if (!nome) {
@@ -455,8 +468,8 @@ async function sendToWhatsApp() {
         telefono = '39' + telefono;
     }
     
-    // Salva in cronologia
-    saveToCronologia(nome, cognome, telefono, messaggio);
+    // Salva in cronologia (v2.2.27: con servizio e società)
+    saveToCronologia(nome, cognome, telefono, messaggio, servizio, societa);
     saveLastMessage(nome, cognome, telefono);
     
     // Salva in Google Contacts
@@ -547,7 +560,7 @@ function showNotification(text, type = 'success') {
 }
 
 // ===== CRONOLOGIA =====
-async function saveToCronologia(nome, cognome, telefono, messaggio) {
+async function saveToCronologia(nome, cognome, telefono, messaggio, servizio, societa) {
     // STEP 1: Carica cronologia esistente (priorità Drive, fallback localStorage)
     let cronologia = [];
     
@@ -582,7 +595,9 @@ async function saveToCronologia(nome, cognome, telefono, messaggio) {
         nome: nome,
         cognome: cognome,
         telefono: telefono,
-        messaggio: messaggio
+        messaggio: messaggio,
+        servizio: servizio || '',
+        societa: societa || ''
     };
     
     cronologia.unshift(entry);

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>v2.2.26 by Dante - Stock Gain Messenger</title>
+    <title>v2.2.27 by Dante - Stock Gain Messenger</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -42,6 +42,9 @@
             <a href="#" class="sidebar-link" data-page="cronologia">
                 <i class="fas fa-history"></i> Cronologia
             </a>
+            <a href="#" class="sidebar-link" data-page="rubrica">
+                <i class="fas fa-address-book"></i> Rubrica
+            </a>
             <a href="#" class="sidebar-link" data-page="importante">
                 <i class="fas fa-star"></i> IMPORTANTE CLICCA
             </a>
@@ -58,7 +61,7 @@
             <div class="header-content">
                 <!-- Titolo e Nome Operatore -->
                 <div class="header-text">
-                    <h1 class="header-title">v2.2.26 by Dante</h1>
+                    <h1 class="header-title">v2.2.27 by Dante</h1>
                     <p class="header-subtitle" id="operatoreName">Stock Gain Messenger</p>
                 </div>
                 
@@ -199,6 +202,7 @@
                         <select id="societaSelect" class="form-control">
                             <option value="SG - Lead">SG - Lead</option>
                             <option value="FE - Lead">FE - Lead</option>
+                            <option value="SG - Collega">SG - Collega</option>
                             <option value="Altro">Altro (scrivi sotto)</option>
                         </select>
                         <input 
@@ -464,6 +468,23 @@
         </div>
 
         <!-- ========================================
+             PAGINA RUBRICA
+        ======================================== -->
+        <div id="rubricaContent" class="page-content" style="display: none;">
+            <div class="card">
+                <div class="card-title">
+                    <i class="fas fa-address-book"></i> Rubrica - Contatti da Salvare
+                </div>
+                <p style="margin-bottom: 20px; color: var(--gray-600);">
+                    Questa sezione mostra i contatti della cronologia che NON sono ancora stati salvati in rubrica Google.
+                </p>
+                <div id="rubricaList" class="rubrica-container">
+                    <p class="placeholder-text">Caricamento contatti...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================
              PAGINA IMPORTANTE
         ======================================== -->
         <div id="importanteContent" class="page-content" style="display: none;">
@@ -489,6 +510,38 @@
                                 <i class="fas fa-copy"></i> Copia IBAN
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- GitHub Push Section -->
+            <div class="card" style="margin-top: 20px;">
+                <div class="card-title">
+                    <i class="fab fa-github"></i> GitHub Auto-Push
+                </div>
+                <div style="padding: 16px;">
+                    <p style="margin-bottom: 16px; color: var(--gray-600);">
+                        Gestisci il push automatico del codice su GitHub.
+                    </p>
+                    
+                    <div id="pushStatusInfo" style="padding: 12px; background: var(--gray-100); border-radius: 8px; margin-bottom: 16px; color: var(--gray-700);">
+                        <i class="fas fa-info-circle"></i>
+                        Nessun push effettuato ancora
+                    </div>
+                    
+                    <button type="button" class="btn btn-primary" id="manualPushBtn">
+                        <i class="fab fa-github"></i> Push su GitHub
+                    </button>
+                    
+                    <div style="margin-top: 16px; padding: 12px; background: var(--warning-light); border-left: 4px solid var(--warning-color); border-radius: 4px;">
+                        <strong style="color: var(--warning-color);">
+                            <i class="fas fa-exclamation-triangle"></i> Nota Sicurezza:
+                        </strong>
+                        <br>
+                        <small style="color: var(--gray-700);">
+                            Il token GitHub è salvato in modo obfuscato nel codice. NON è sicuro al 100%.
+                            Rigenera il token ogni 90 giorni su <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings</a>.
+                        </small>
                     </div>
                 </div>
             </div>
@@ -529,14 +582,16 @@
     </button>
 
     <!-- Scripts -->
-    <script src="js/nomi-italiani.js?v=2.2.26"></script>
-    <script src="js/config.js?v=2.2.26"></script>
-    <script src="js/google-auth.js?v=2.2.26"></script>
-    <script src="js/google-drive-storage.js?v=2.2.26"></script>
-    <script src="js/google-sheets-assistenti.js?v=2.2.26"></script>
-    <script src="js/google-calendar.js?v=2.2.26"></script>
-    <script src="js/templates.js?v=2.2.26"></script>
-    <script src="js/main.js?v=2.2.26"></script>
+    <script src="js/nomi-italiani.js?v=2.2.27"></script>
+    <script src="js/config.js?v=2.2.27"></script>
+    <script src="js/google-auth.js?v=2.2.27"></script>
+    <script src="js/google-drive-storage.js?v=2.2.27"></script>
+    <script src="js/google-sheets-assistenti.js?v=2.2.27"></script>
+    <script src="js/google-calendar.js?v=2.2.27"></script>
+    <script src="js/templates.js?v=2.2.27"></script>
+    <script src="js/rubrica.js?v=2.2.27"></script>
+    <script src="js/github-auto-push.js?v=2.2.27"></script>
+    <script src="js/main.js?v=2.2.27"></script>
     
     <!-- Google API Initialization -->
     <script>

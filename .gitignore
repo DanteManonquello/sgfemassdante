@@ -32,3 +32,14 @@ Thumbs.db
 # Google credentials
 credentials.json
 token.json
+
+# System files (sandbox)
+.opencode/
+.config/
+.bash_logout
+.bashrc
+.genspark_llm.yaml
+.genspark_llm_initialized
+.gitconfig
+.profile
+
