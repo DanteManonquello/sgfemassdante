@@ -27,17 +27,27 @@ function initRubrica() {
 function getUnsavedContacts() {
     // 1. Carica cronologia messaggi
     const cronologiaJSON = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
-    if (!cronologiaJSON) return [];
-    
     let cronologia = [];
-    try {
-        cronologia = JSON.parse(cronologiaJSON);
-    } catch (e) {
-        console.error('❌ Errore parsing cronologia:', e);
-        return [];
+    if (cronologiaJSON) {
+        try {
+            cronologia = JSON.parse(cronologiaJSON);
+        } catch (e) {
+            console.error('❌ Errore parsing cronologia:', e);
+        }
     }
     
-    // 2. Carica cache contatti salvati
+    // 2. Carica eventi calendario
+    const calendarEventsJSON = localStorage.getItem('sgmess_calendar_events');
+    let calendarEvents = [];
+    if (calendarEventsJSON) {
+        try {
+            calendarEvents = JSON.parse(calendarEventsJSON);
+        } catch (e) {
+            console.error('❌ Errore parsing calendar events:', e);
+        }
+    }
+    
+    // 3. Carica cache contatti salvati
     const savedContactsJSON = localStorage.getItem(STORAGE_KEYS_RUBRICA.SAVED_CONTACTS);
     let savedContacts = {};
     if (savedContactsJSON) {
@@ -48,7 +58,7 @@ function getUnsavedContacts() {
         }
     }
     
-    // 3. Estrai contatti unici dalla cronologia
+    // 4. Estrai contatti unici dalla cronologia
     const uniqueContacts = {};
     
     cronologia.forEach(entry => {
@@ -63,17 +73,126 @@ function getUnsavedContacts() {
                 telefono: entry.telefono,
                 societa: entry.societa || '',
                 servizio: entry.servizio || '',
-                timestamp: entry.timestamp || new Date().toISOString()
+                timestamp: entry.timestamp || new Date().toISOString(),
+                source: 'cronologia'
             };
         }
     });
     
-    // 4. Converti in array e ordina per timestamp (più recenti prima)
+    // 5. Estrai contatti dagli eventi calendario
+    calendarEvents.forEach(event => {
+        // Estrai dati dall'evento
+        const contactData = extractContactFromEvent(event);
+        if (!contactData) return; // Skip se non riesce a estrarre
+        
+        const phone = normalizePhone(contactData.telefono);
+        if (!phone) return; // Skip se non c'è telefono
+        
+        // Se non è già salvato E non è già nella lista
+        if (!savedContacts[phone] && !uniqueContacts[phone]) {
+            uniqueContacts[phone] = {
+                nome: contactData.nome || '',
+                cognome: contactData.cognome || '',
+                telefono: contactData.telefono,
+                societa: contactData.societa || '',
+                servizio: contactData.servizio || '',
+                timestamp: event.start || new Date().toISOString(),
+                source: 'calendario',
+                calendarName: event.calendarName || ''
+            };
+        }
+    });
+    
+    // 6. Converti in array e ordina per timestamp (più recenti prima)
     const unsavedArray = Object.values(uniqueContacts);
     unsavedArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
-    console.log(`📒 Trovati ${unsavedArray.length} contatti non salvati`);
+    console.log(`📒 Trovati ${unsavedArray.length} contatti non salvati (${cronologia.length} da cronologia, ${calendarEvents.length} da calendario)`);
     return unsavedArray;
+}
+
+// ===== ESTRAI CONTATTO DA EVENTO CALENDARIO =====
+function extractContactFromEvent(event) {
+    if (!event || !event.summary) return null;
+    
+    // Pattern per estrarre informazioni da eventi tipo:
+    // "15:30 - Mario Rossi (Stock Gain)"
+    // "Mario Rossi - Call consulenza"
+    
+    let nome = '';
+    let cognome = '';
+    let telefono = '';
+    let servizio = '';
+    let societa = '';
+    
+    // 1. Estrai nome dal summary (rimuovi orario se presente)
+    let nameText = event.summary.replace(/^\d{1,2}:\d{2}\s*-\s*/, ''); // Rimuovi "15:30 - "
+    nameText = nameText.replace(/\s*\([^)]*\)\s*$/, ''); // Rimuovi "(Stock Gain)" finale
+    nameText = nameText.trim();
+    
+    // 2. Split nome e cognome usando database nomi italiani
+    if (window.splitNomeCognome) {
+        const split = window.splitNomeCognome(nameText);
+        nome = split.nome;
+        cognome = split.cognome;
+    } else {
+        // Fallback: primo spazio
+        const parts = nameText.split(' ');
+        nome = parts[0] || '';
+        cognome = parts.slice(1).join(' ') || '';
+    }
+    
+    // 3. Estrai telefono dalla description
+    if (event.description) {
+        // Pattern: "Telefono: +39 333 1234567" o "Tel: 3331234567"
+        const phoneMatch = event.description.match(/(?:telefono|tel|phone|cellulare)[\s:]*([+\d\s\-()]{8,})/i);
+        if (phoneMatch) {
+            telefono = phoneMatch[1].trim();
+        }
+        
+        // Estrai servizio
+        const serviceMatch = event.description.match(/(?:servizio|service)[\s:]*([^\n]+)/i);
+        if (serviceMatch) {
+            servizio = serviceMatch[1].trim();
+        }
+    }
+    
+    // 4. Determina società dal calendarName o servizio
+    if (event.calendarName) {
+        if (event.calendarName.includes('Stock Gain') || event.calendarName.includes('SG')) {
+            societa = 'SG - Lead';
+            if (!servizio) servizio = 'Stock Gain';
+        } else if (event.calendarName.includes('Finanza Efficace') || event.calendarName.includes('FE')) {
+            societa = 'FE - Lead';
+            if (!servizio) servizio = 'Finanza Efficace';
+        }
+    }
+    
+    // Se non ha telefono, cerca nell'attendees
+    if (!telefono && event.attendees && event.attendees.length > 0) {
+        event.attendees.forEach(attendee => {
+            if (attendee.email && attendee.email.includes('@')) {
+                // Cerca numero nel nome dell'attendee
+                const phoneMatch = (attendee.displayName || attendee.email).match(/([+\d\s\-()]{8,})/);
+                if (phoneMatch && !telefono) {
+                    telefono = phoneMatch[1].trim();
+                }
+            }
+        });
+    }
+    
+    // Ritorna solo se abbiamo almeno nome e telefono
+    if (nome && telefono) {
+        return {
+            nome,
+            cognome,
+            telefono,
+            servizio,
+            societa
+        };
+    }
+    
+    return null;
 }
 
 // ===== NORMALIZZA NUMERO TELEFONO =====
@@ -241,21 +360,67 @@ function renderRubricaList() {
     const container = document.getElementById('rubricaList');
     if (!container) return;
     
+    // STEP 1: Verifica se hai mai sincronizzato
+    const lastSync = localStorage.getItem(STORAGE_KEYS_RUBRICA.LAST_RUBRICA_SYNC);
+    const hasSynced = !!lastSync;
+    
+    // STEP 2: Verifica se hai cronologia o eventi
+    const cronologiaJSON = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
+    const calendarEventsJSON = localStorage.getItem('sgmess_calendar_events');
+    const hasCronologia = cronologiaJSON && JSON.parse(cronologiaJSON).length > 0;
+    const hasCalendar = calendarEventsJSON && JSON.parse(calendarEventsJSON).length > 0;
+    const hasAnyData = hasCronologia || hasCalendar;
+    
+    // STEP 3: Ottieni contatti non salvati
     const unsavedContacts = getUnsavedContacts();
     
-    // Se vuoto
-    if (unsavedContacts.length === 0) {
+    // CASO 1: Mai sincronizzato
+    if (!hasSynced) {
         container.innerHTML = `
-            <div class="empty-state">
-                <i class="fas fa-check-circle" style="font-size: 48px; color: var(--success-color); margin-bottom: 16px;"></i>
-                <p style="color: var(--gray-600);">Tutti i contatti sono stati salvati in rubrica!</p>
+            <div class="info-state" style="text-align: center; padding: 40px 20px;">
+                <i class="fas fa-info-circle" style="font-size: 64px; color: var(--info-color); margin-bottom: 20px;"></i>
+                <h3 style="color: var(--gray-800); margin-bottom: 12px;">Prima sincronizzazione necessaria</h3>
+                <p style="color: var(--gray-600); margin-bottom: 24px;">
+                    Click su <strong style="color: var(--primary-color);">🔄 Sincronizza</strong> per caricare i contatti da Google Contacts
+                </p>
+                <button type="button" class="btn btn-primary" onclick="syncSavedContactsFromGoogle()">
+                    <i class="fas fa-sync-alt"></i> Sincronizza Ora
+                </button>
             </div>
         `;
         return;
     }
     
+    // CASO 2: Sincronizzato ma nessun dato (né cronologia né calendario)
+    if (!hasAnyData) {
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px 20px;">
+                <i class="fas fa-inbox" style="font-size: 64px; color: var(--gray-400); margin-bottom: 20px;"></i>
+                <h3 style="color: var(--gray-600); margin-bottom: 12px;">Nessun dato disponibile</h3>
+                <p style="color: var(--gray-500);">
+                    Invia il primo messaggio o sincronizza il calendario Google per vedere i contatti qui
+                </p>
+            </div>
+        `;
+        return;
+    }
+    
+    // CASO 3: Tutti i contatti già salvati
+    if (unsavedContacts.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px 20px;">
+                <i class="fas fa-check-circle" style="font-size: 64px; color: var(--success-color); margin-bottom: 20px;"></i>
+                <h3 style="color: var(--success-color); margin-bottom: 12px;">Tutti i contatti sono salvati!</h3>
+                <p style="color: var(--gray-600);">
+                    Ottimo lavoro! Non ci sono contatti da salvare in rubrica.
+                </p>
+            </div>
+        `;
+        return;
+    }
+    
+    // CASO 4: Ci sono contatti da salvare
     // Mostra ultimo sync
-    const lastSync = localStorage.getItem(STORAGE_KEYS_RUBRICA.LAST_RUBRICA_SYNC);
     let syncText = 'Mai sincronizzato';
     if (lastSync) {
         const syncDate = new Date(lastSync);
@@ -295,6 +460,13 @@ function renderRubricaList() {
                             ${contact.societa ? `
                                 <div style="font-size: 0.85em; color: var(--gray-500);">
                                     <i class="fas fa-building"></i> ${contact.societa}
+                                </div>
+                            ` : ''}
+                            ${contact.source ? `
+                                <div style="font-size: 0.8em; color: var(--gray-400); margin-top: 4px;">
+                                    <i class="fas fa-${contact.source === 'calendario' ? 'calendar' : 'history'}"></i> 
+                                    ${contact.source === 'calendario' ? 'Da calendario' : 'Da cronologia'}
+                                    ${contact.calendarName ? ` (${contact.calendarName})` : ''}
                                 </div>
                             ` : ''}
                         </div>

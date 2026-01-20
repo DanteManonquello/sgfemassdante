@@ -160,6 +160,16 @@ function maybeEnableButtons() {
             console.log('✅ Pulsante Google abilitato');
             logDebug('✅ Pulsante login abilitato');
         }
+        
+        // ===== RIPRISTINA TOKEN DA localStorage =====
+        // Solo alla prima volta (quando entrambi gapi e gis sono pronti)
+        if (!window.accessToken) {
+            console.log('🔄 Tentativo ripristino token da localStorage...');
+            const restored = restoreTokenFromStorage();
+            if (!restored) {
+                console.log('ℹ️ Nessun token salvato o token scaduto');
+            }
+        }
     }
 }
 
@@ -330,6 +340,23 @@ async function handleAuthResponse(resp) {
     
     accessToken = resp.access_token;
     window.accessToken = accessToken;
+    
+    // ===== PERSISTENZA TOKEN (localStorage) =====
+    const expiresIn = resp.expires_in || 3600; // secondi (default 1 ora)
+    const expiresAt = Date.now() + (expiresIn * 1000);
+    
+    try {
+        localStorage.setItem('google_access_token', accessToken);
+        localStorage.setItem('google_token_expires_at', expiresAt.toString());
+        console.log(`✅ Access token salvato (scade tra ${Math.floor(expiresIn / 60)} minuti)`);
+        logDebug('✅ Token salvato in localStorage', { expiresIn, expiresAt });
+    } catch (e) {
+        console.warn('⚠️ Impossibile salvare token in localStorage:', e);
+    }
+    
+    // ===== AUTO-REFRESH TIMER =====
+    setupTokenAutoRefresh(expiresIn);
+    
     console.log('✅ Access token ricevuto');
     logDebug('✅ Access token ricevuto', { tokenLength: accessToken.length });
     
@@ -358,12 +385,119 @@ async function handleAuthResponse(resp) {
     }
 }
 
+// ===== AUTO-REFRESH TOKEN TIMER =====
+let tokenRefreshTimer = null;
+
+function setupTokenAutoRefresh(expiresIn) {
+    // Cancella timer precedente
+    if (tokenRefreshTimer) {
+        clearTimeout(tokenRefreshTimer);
+    }
+    
+    // Calcola quando fare refresh (5 minuti prima della scadenza)
+    const refreshInMs = (expiresIn - 300) * 1000; // 5 minuti prima
+    
+    if (refreshInMs > 0) {
+        tokenRefreshTimer = setTimeout(async () => {
+            console.log('🔄 Auto-refresh token in corso...');
+            
+            if (tokenClient) {
+                try {
+                    // Richiesta silente (nessun popup)
+                    tokenClient.requestAccessToken({ prompt: '' });
+                    console.log('✅ Token refresh richiesto');
+                } catch (error) {
+                    console.warn('⚠️ Errore auto-refresh token:', error);
+                    // Se fallisce, l'utente dovrà rifare login manualmente
+                }
+            }
+        }, refreshInMs);
+        
+        console.log(`⏰ Auto-refresh impostato tra ${Math.floor(refreshInMs / 60000)} minuti`);
+    }
+}
+
+// ===== RIPRISTINA TOKEN DA localStorage ALL'AVVIO =====
+function restoreTokenFromStorage() {
+    try {
+        const savedToken = localStorage.getItem('google_access_token');
+        const expiresAt = parseInt(localStorage.getItem('google_token_expires_at') || '0');
+        
+        if (savedToken && Date.now() < expiresAt) {
+            // Token ancora valido
+            accessToken = savedToken;
+            window.accessToken = savedToken;
+            
+            const remainingMinutes = Math.floor((expiresAt - Date.now()) / 60000);
+            console.log(`✅ Token ripristinato da localStorage (valido per altri ${remainingMinutes} minuti)`);
+            logDebug('✅ Token ripristinato', { remainingMinutes });
+            
+            // Setup auto-refresh
+            const remainingSeconds = Math.floor((expiresAt - Date.now()) / 1000);
+            setupTokenAutoRefresh(remainingSeconds);
+            
+            // Carica user info e aggiorna UI
+            (async () => {
+                try {
+                    const userInfo = await getUserInfo();
+                    userProfileData = userInfo;
+                    showUserInfo(userInfo);
+                    updateGoogleUIStatus(true, userInfo);
+                    console.log('✅ Auto-login completato:', userInfo);
+                    
+                    // Sincronizza calendario silenziosamente
+                    if (window.syncCalendarEvents) {
+                        setTimeout(() => {
+                            window.syncCalendarEvents(true); // silent = true
+                        }, 1000);
+                    }
+                } catch (error) {
+                    console.warn('⚠️ Token non più valido, rimuovo localStorage');
+                    localStorage.removeItem('google_access_token');
+                    localStorage.removeItem('google_token_expires_at');
+                    accessToken = null;
+                    window.accessToken = null;
+                }
+            })();
+            
+            return true;
+        } else {
+            // Token scaduto o non presente
+            if (savedToken) {
+                console.log('⚠️ Token scaduto, rimuovo da localStorage');
+                localStorage.removeItem('google_access_token');
+                localStorage.removeItem('google_token_expires_at');
+            }
+            return false;
+        }
+    } catch (e) {
+        console.error('❌ Errore ripristino token:', e);
+        return false;
+    }
+}
+
 function handleSignoutClick() {
     if (accessToken) {
         google.accounts.oauth2.revoke(accessToken);
         accessToken = null;
         window.accessToken = null;
     }
+    
+    // Cancella timer auto-refresh
+    if (tokenRefreshTimer) {
+        clearTimeout(tokenRefreshTimer);
+        tokenRefreshTimer = null;
+    }
+    
+    // Cancella token da localStorage
+    try {
+        localStorage.removeItem('google_access_token');
+        localStorage.removeItem('google_token_expires_at');
+        console.log('✅ Token rimosso da localStorage');
+    } catch (e) {
+        console.warn('⚠️ Errore rimozione token:', e);
+    }
+    
     userProfileData = null;
     hideUserInfo();
     updateGoogleUIStatus(false);

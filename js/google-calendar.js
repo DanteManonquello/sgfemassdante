@@ -18,10 +18,12 @@
 const STORAGE_KEYS_CALENDAR = {
     CALENDAR_EVENTS: 'sgmess_calendar_events',
     LAST_SYNC: 'sgmess_last_sync',
-    CONTACTED_LEADS: 'sgmess_contacted_leads' // Lead a cui abbiamo già mandato messaggi
+    CONTACTED_LEADS: 'sgmess_contacted_leads', // Lead a cui abbiamo già mandato messaggi
+    LOADED_DAYS_BACK: 'sgmess_loaded_days_back' // Quanti giorni indietro abbiamo caricato
 };
 
 let calendarSyncInterval = null;
+let isLoadingMoreEvents = false; // Flag per evitare chiamate multiple
 
 // ===== INIT CALENDAR SYNC =====
 function initCalendarSync() {
@@ -41,13 +43,21 @@ function initCalendarSync() {
 }
 
 // ===== SINCRONIZZA EVENTI =====
-async function syncCalendarEvents(silent = false) {
+async function syncCalendarEvents(silent = false, loadMore = false) {
     if (!window.accessToken) {
         if (!silent) {
             showNotification('Connetti Google per sincronizzare il calendario', 'error');
         }
         return;
     }
+    
+    // Evita chiamate multiple simultanee
+    if (isLoadingMoreEvents) {
+        console.log('⏳ Caricamento già in corso, skip...');
+        return;
+    }
+    
+    isLoadingMoreEvents = true;
     
     try {
         if (!silent) {
@@ -89,12 +99,31 @@ async function syncCalendarEvents(silent = false) {
         
         console.log(`✅ Trovati ${targetCalendars.length} calendari SG:`, targetCalendars.map(c => c.summary));
         
-        // STEP 3: Carica eventi da ULTIMI 90 GIORNI + PROSSIMI 30 GIORNI
+        // STEP 3: Carica eventi (progressivo)
         const now = new Date();
         
-        // Ultimi 90 giorni (eventi passati)
+        // Determina quanti giorni indietro caricare
+        let daysBack = parseInt(localStorage.getItem(STORAGE_KEYS_CALENDAR.LOADED_DAYS_BACK) || '90');
+        
+        if (loadMore) {
+            // Carica altri 90 giorni indietro
+            daysBack += 90;
+            localStorage.setItem(STORAGE_KEYS_CALENDAR.LOADED_DAYS_BACK, daysBack.toString());
+            console.log(`📅 Caricamento esteso a ${daysBack} giorni indietro`);
+            if (!silent) {
+                showNotification(`🔄 Caricamento eventi (${daysBack} giorni)...`, 'info');
+            }
+        } else {
+            // Reset al primo caricamento
+            if (!silent) {
+                daysBack = 90;
+                localStorage.setItem(STORAGE_KEYS_CALENDAR.LOADED_DAYS_BACK, '90');
+            }
+        }
+        
+        // Calcola range temporale
         const pastDate = new Date();
-        pastDate.setDate(pastDate.getDate() - 90);
+        pastDate.setDate(pastDate.getDate() - daysBack);
         const timeMin = pastDate.toISOString();
         
         // Prossimi 30 giorni (eventi futuri)
@@ -133,6 +162,19 @@ async function syncCalendarEvents(silent = false) {
         
         console.log(`✅ Totale eventi ricevuti: ${allEvents.length}`);
         
+        // Se loadMore, merge con eventi esistenti
+        let existingEvents = [];
+        if (loadMore) {
+            const existingJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
+            if (existingJSON) {
+                try {
+                    existingEvents = JSON.parse(existingJSON);
+                } catch (e) {
+                    console.warn('⚠️ Errore parsing eventi esistenti');
+                }
+            }
+        }
+        
         // Salva eventi in localStorage
         const eventsData = allEvents.map(event => ({
             id: event.id,
@@ -146,7 +188,18 @@ async function syncCalendarEvents(silent = false) {
             calendarId: event.calendarId
         }));
         
-        localStorage.setItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS, JSON.stringify(eventsData));
+        // Merge con eventi esistenti se loadMore
+        let finalEvents = eventsData;
+        if (loadMore && existingEvents.length > 0) {
+            // Rimuovi duplicati usando ID evento
+            const eventMap = new Map();
+            existingEvents.forEach(e => eventMap.set(e.id, e));
+            eventsData.forEach(e => eventMap.set(e.id, e));
+            finalEvents = Array.from(eventMap.values());
+            console.log(`🔀 Merge: ${existingEvents.length} esistenti + ${eventsData.length} nuovi = ${finalEvents.length} totali`);
+        }
+        
+        localStorage.setItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS, JSON.stringify(finalEvents));
         localStorage.setItem(STORAGE_KEYS_CALENDAR.LAST_SYNC, new Date().toISOString());
         
         console.log('💾 Eventi salvati in localStorage');
@@ -156,16 +209,23 @@ async function syncCalendarEvents(silent = false) {
         updateLeadsList(); // Aggiorna lista lead per data corrente
         
         if (!silent) {
-            showNotification(`✅ ${allEvents.length} appuntamenti sincronizzati dai calendari SG`, 'success');
+            if (loadMore) {
+                showNotification(`✅ Caricati ${finalEvents.length} eventi totali (${daysBack} giorni)`, 'success');
+            } else {
+                showNotification(`✅ ${finalEvents.length} appuntamenti sincronizzati dai calendari SG`, 'success');
+            }
         }
         
-        console.log(`✅ Sincronizzati ${allEvents.length} eventi dai calendari SG`);
+        console.log(`✅ Sincronizzati ${finalEvents.length} eventi dai calendari SG (${daysBack} giorni indietro)`);
+        
+        isLoadingMoreEvents = false;
         
     } catch (error) {
         console.error('❌ Errore sync calendario:', error);
         if (!silent) {
             showNotification('Errore sincronizzazione calendario', 'error');
         }
+        isLoadingMoreEvents = false;
     }
 }
 
@@ -733,6 +793,42 @@ document.addEventListener('DOMContentLoaded', function() {
         syncBtn.addEventListener('click', () => syncCalendarEvents(false));
     }
     
+    // Bottone carica mesi precedenti
+    const loadMoreBtn = document.getElementById('loadMoreEventsBtn');
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', async () => {
+            loadMoreBtn.disabled = true;
+            loadMoreBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Caricamento...';
+            
+            await syncCalendarEvents(false, true); // loadMore = true
+            
+            // Aggiorna info giorni caricati
+            const daysBack = parseInt(localStorage.getItem(STORAGE_KEYS_CALENDAR.LOADED_DAYS_BACK) || '90');
+            const infoEl = document.getElementById('loadedDaysInfo');
+            if (infoEl) {
+                infoEl.innerHTML = `<i class="fas fa-info-circle"></i> Ultimi ${daysBack} giorni caricati`;
+            }
+            
+            // Aggiorna rubrica se aperta
+            if (window.renderRubricaList) {
+                window.renderRubricaList();
+            }
+            
+            loadMoreBtn.disabled = false;
+            loadMoreBtn.innerHTML = '<i class="fas fa-history"></i> Carica Mesi Precedenti';
+        });
+    }
+    
+    // Aggiorna info giorni caricati all'avvio
+    const updateLoadedDaysInfo = () => {
+        const daysBack = parseInt(localStorage.getItem(STORAGE_KEYS_CALENDAR.LOADED_DAYS_BACK) || '90');
+        const infoEl = document.getElementById('loadedDaysInfo');
+        if (infoEl) {
+            infoEl.innerHTML = `<i class="fas fa-info-circle"></i> Ultimi ${daysBack} giorni caricati`;
+        }
+    };
+    updateLoadedDaysInfo();
+    
     // Bottone refresh lead (ricarica lead senza sincronizzare calendario)
     const refreshLeadsBtn = document.getElementById('refreshLeadsBtn');
     if (refreshLeadsBtn) {
@@ -785,4 +881,4 @@ window.displayCalendarView = displayCalendarView;
 window.setTodayDate = setTodayDate;
 window.updateLeadsList = updateLeadsList;
 
-console.log('✅ Google Calendar module v2.2.26 caricato - Lead colorati + Eventi passati (90gg) + Multi-calendario automatico');
+console.log('✅ Google Calendar module v2.2.28 caricato - Caricamento progressivo 90gg + Lead colorati + Multi-calendario');

@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.27 inizializzato');
+    console.log('🚀 TESTmess v2.2.28 inizializzato');
     
     setupSidebar();
     setupNavigation();
