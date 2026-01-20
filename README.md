@@ -186,3 +186,4 @@ Per problemi o domande contattare Dante tramite sistema interno Stock Gain.
 
 **Ultima modifica**: 2026-01-06  
 **Status**: ✅ Attivo e funzionante
+# Force rebuild Tue Jan 20 14:26:03 UTC 2026
