@@ -24,26 +24,73 @@ function initRubrica() {
 }
 
 // ===== OTTIENI CONTATTI NON SALVATI =====
-function getUnsavedContacts() {
-    // 1. Carica cronologia messaggi
-    const cronologiaJSON = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
+async function getUnsavedContacts() {
+    // 1. Carica cronologia messaggi DA GOOGLE DRIVE
     let cronologia = [];
-    if (cronologiaJSON) {
+    if (window.DriveStorage && window.accessToken) {
         try {
-            cronologia = JSON.parse(cronologiaJSON);
+            const driveData = await window.DriveStorage.load(STORAGE_KEYS.CRONOLOGIA);
+            if (driveData) {
+                cronologia = driveData;
+                console.log(`📂 Caricati ${cronologia.length} messaggi da Drive`);
+            }
         } catch (e) {
-            console.error('❌ Errore parsing cronologia:', e);
+            console.error('❌ Errore caricamento cronologia Drive:', e);
         }
     }
     
-    // 2. Carica eventi calendario
-    const calendarEventsJSON = localStorage.getItem('sgmess_calendar_events');
+    // 2. Carica TUTTI gli eventi calendario degli ultimi 12 mesi DA GOOGLE CALENDAR API
     let calendarEvents = [];
-    if (calendarEventsJSON) {
+    if (window.accessToken && window.gapi && window.gapi.client && window.gapi.client.calendar) {
         try {
-            calendarEvents = JSON.parse(calendarEventsJSON);
+            console.log('📅 Caricamento eventi calendario ultimi 12 mesi...');
+            
+            // Range: 12 mesi nel passato fino a oggi
+            const now = new Date();
+            const twelveMonthsAgo = new Date();
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+            
+            const timeMin = twelveMonthsAgo.toISOString();
+            const timeMax = now.toISOString();
+            
+            // Ottieni lista calendari
+            const calendarListResponse = await window.gapi.client.calendar.calendarList.list();
+            const calendars = calendarListResponse.result.items || [];
+            
+            console.log(`📆 Trovati ${calendars.length} calendari`);
+            
+            // Per ogni calendario, carica eventi
+            for (const calendar of calendars) {
+                try {
+                    const eventsResponse = await window.gapi.client.calendar.events.list({
+                        calendarId: calendar.id,
+                        timeMin: timeMin,
+                        timeMax: timeMax,
+                        maxResults: 2500, // Massimo possibile
+                        singleEvents: true,
+                        orderBy: 'startTime'
+                    });
+                    
+                    const events = eventsResponse.result.items || [];
+                    
+                    // Aggiungi nome calendario a ogni evento
+                    events.forEach(event => {
+                        calendarEvents.push({
+                            ...event,
+                            calendarName: calendar.summary,
+                            start: event.start.dateTime || event.start.date
+                        });
+                    });
+                    
+                    console.log(`  ✅ ${calendar.summary}: ${events.length} eventi`);
+                } catch (err) {
+                    console.warn(`⚠️ Errore caricamento calendario ${calendar.summary}:`, err);
+                }
+            }
+            
+            console.log(`📅 TOTALE: ${calendarEvents.length} eventi ultimi 12 mesi`);
         } catch (e) {
-            console.error('❌ Errore parsing calendar events:', e);
+            console.error('❌ Errore caricamento eventi calendario:', e);
         }
     }
     
@@ -107,7 +154,13 @@ function getUnsavedContacts() {
     const unsavedArray = Object.values(uniqueContacts);
     unsavedArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
-    console.log(`📒 Trovati ${unsavedArray.length} contatti non salvati (${cronologia.length} da cronologia, ${calendarEvents.length} da calendario)`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log(`📒 RUBRICA SCAN COMPLETO:`);
+    console.log(`   📂 Cronologia Drive: ${cronologia.length} messaggi`);
+    console.log(`   📅 Eventi Calendario: ${calendarEvents.length} eventi (12 mesi)`);
+    console.log(`   🔍 Contatti da salvare: ${unsavedArray.length}`);
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    
     return unsavedArray;
 }
 
@@ -203,7 +256,7 @@ function normalizePhone(phone) {
 }
 
 // ===== MARCA CONTATTO COME SALVATO =====
-function markContactAsSaved(phone) {
+async function markContactAsSaved(phone) {
     const normalized = normalizePhone(phone);
     if (!normalized) return;
     
@@ -228,11 +281,11 @@ function markContactAsSaved(phone) {
     console.log(`✅ Contatto ${normalized} marcato come salvato`);
     
     // Aggiorna UI
-    renderRubricaList();
+    await renderRubricaList();
 }
 
 // ===== RIMUOVI CONTATTO DA SALVATI (per annullare) =====
-function unmarkContactAsSaved(phone) {
+async function unmarkContactAsSaved(phone) {
     const normalized = normalizePhone(phone);
     if (!normalized) return;
     
@@ -250,7 +303,7 @@ function unmarkContactAsSaved(phone) {
     localStorage.setItem(STORAGE_KEYS_RUBRICA.SAVED_CONTACTS, JSON.stringify(savedContacts));
     console.log(`🔄 Contatto ${normalized} rimosso da salvati`);
     
-    renderRubricaList();
+    await renderRubricaList();
 }
 
 // ===== SINCRONIZZA CON GOOGLE CONTACTS =====
@@ -298,7 +351,7 @@ async function syncSavedContactsFromGoogle() {
         mostraNotifica(`✅ Rubrica sincronizzata: ${Object.keys(savedContacts).length} contatti`, 'success');
         
         // Aggiorna UI
-        renderRubricaList();
+        await renderRubricaList();
         
     } catch (error) {
         console.error('❌ Errore sync rubrica:', error);
@@ -356,23 +409,28 @@ async function saveContactToGoogle(contactData) {
 }
 
 // ===== RENDER LISTA RUBRICA =====
-function renderRubricaList() {
+async function renderRubricaList() {
     const container = document.getElementById('rubricaList');
     if (!container) return;
+    
+    // Mostra loader
+    container.innerHTML = `
+        <div style="text-align: center; padding: 40px 20px;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: var(--primary-color); margin-bottom: 16px;"></i>
+            <p style="color: var(--gray-600);">Scansione contatti in corso...</p>
+            <p style="color: var(--gray-500); font-size: 0.9em;">Caricamento cronologia Drive + eventi calendario (12 mesi)...</p>
+        </div>
+    `;
     
     // STEP 1: Verifica se hai mai sincronizzato
     const lastSync = localStorage.getItem(STORAGE_KEYS_RUBRICA.LAST_RUBRICA_SYNC);
     const hasSynced = !!lastSync;
     
-    // STEP 2: Verifica se hai cronologia o eventi
-    const cronologiaJSON = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
-    const calendarEventsJSON = localStorage.getItem('sgmess_calendar_events');
-    const hasCronologia = cronologiaJSON && JSON.parse(cronologiaJSON).length > 0;
-    const hasCalendar = calendarEventsJSON && JSON.parse(calendarEventsJSON).length > 0;
-    const hasAnyData = hasCronologia || hasCalendar;
+    // STEP 2: Ottieni contatti non salvati (ASYNC!)
+    const unsavedContacts = await getUnsavedContacts();
     
-    // STEP 3: Ottieni contatti non salvati
-    const unsavedContacts = getUnsavedContacts();
+    // STEP 3: Verifica se hai dati
+    const hasAnyData = unsavedContacts.length > 0 || hasSynced;
     
     // CASO 1: Mai sincronizzato
     if (!hasSynced) {
@@ -524,8 +582,8 @@ function renderRubricaList() {
     });
     
     container.querySelectorAll('.mark-saved-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            markContactAsSaved(this.dataset.phone);
+        btn.addEventListener('click', async function() {
+            await markContactAsSaved(this.dataset.phone);
             mostraNotifica('Contatto marcato come già salvato', 'success');
         });
     });
