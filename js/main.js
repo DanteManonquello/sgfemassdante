@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.3.0 inizializzato');
+    console.log('🚀 TESTmess v2.5.0 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -66,6 +66,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (window.initGitHubAutoPush) {
         window.initGitHubAutoPush();
     }
+    
+    // 🔔 Inizializza Dolce Paranoia
+    await renderDolceParanoiaList();
     
     // Migrazione dati (se primo login)
     if (window.DriveStorage && window.accessToken) {
@@ -296,6 +299,15 @@ async function setupEventListeners() {
     document.getElementById('copiaMessaggio').addEventListener('click', copyToClipboard);
     document.getElementById('copiaIban').addEventListener('click', copyIban);
     
+    // 🔔 Dolce Paranoia refresh
+    const refreshDolceParanoiaBtn = document.getElementById('refreshDolceParanoiaBtn');
+    if (refreshDolceParanoiaBtn) {
+        refreshDolceParanoiaBtn.addEventListener('click', async () => {
+            await renderDolceParanoiaList();
+            showNotification('🔔 Promemoria aggiornati', 'success');
+        });
+    }
+    
     // Anteprima editabile
     document.getElementById('anteprimaMessaggio').addEventListener('input', function() {
         // L'anteprima è sempre sincronizzata, ma può essere modificata manualmente
@@ -418,7 +430,32 @@ async function updatePreview() {
     const BB = getSalutoIniziale();
     const NN = nome;
     const YY = assistente === 'M' ? 'il mio' : 'la mia';
-    const GG = giorno;
+    
+    // 🆕 LOGICA {GG} DINAMICA per Dolce Paranoia
+    let GG = giorno;
+    if (tipoMessaggio === 'dolce_paranoia') {
+        // Calcola giorni mancanti dall'appuntamento
+        // Se utente ha selezionato un lead da Dolce Paranoia, usa quella data
+        const selectedLead = document.getElementById('selectLead');
+        if (selectedLead && selectedLead.value) {
+            const selectedOption = selectedLead.options[selectedLead.selectedIndex];
+            if (selectedOption && selectedOption.dataset.eventData) {
+                const event = JSON.parse(selectedOption.dataset.eventData);
+                const dataAppuntamento = new Date(event.start);
+                const oggi = new Date();
+                oggi.setHours(0, 0, 0, 0);
+                dataAppuntamento.setHours(0, 0, 0, 0);
+                
+                const diffTime = dataAppuntamento - oggi;
+                const giorniMancanti = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (giorniMancanti === 0) GG = "oggi";
+                else if (giorniMancanti === 1) GG = "domani";
+                else if (giorniMancanti === 2) GG = "dopodomani";
+                else GG = `tra ${giorniMancanti} giorni`;
+            }
+        }
+    }
     
     // 🆕 FORMATO ORARIO SPECIALE per Memo del Giorno
     let HH = orario;
@@ -614,6 +651,218 @@ function showNotification(text, type = 'success') {
         notifica.classList.remove('show');
     }, 3000);
 }
+
+// ===== DOLCE PARANOIA =====
+async function getDolceParanoiaLeads() {
+    console.log('🔔 Calcolo lead Dolce Paranoia...');
+    
+    if (!window.accessToken) {
+        console.warn('⚠️ No accessToken per Dolce Paranoia');
+        return [];
+    }
+    
+    // 1. Carica cronologia da Drive
+    let cronologia = [];
+    if (window.DriveStorage) {
+        try {
+            const driveData = await window.DriveStorage.load(STORAGE_KEYS.CRONOLOGIA);
+            if (driveData) cronologia = driveData;
+        } catch (e) {
+            console.error('❌ Errore caricamento cronologia:', e);
+        }
+    }
+    
+    // 2. Carica eventi calendario
+    const eventsJSON = localStorage.getItem('sgmess_calendar_events');
+    const events = JSON.parse(eventsJSON || '[]');
+    
+    if (events.length === 0) {
+        console.log('⚠️ Nessun evento calendario');
+        return [];
+    }
+    
+    const oggi = new Date();
+    oggi.setHours(0, 0, 0, 0);
+    
+    const dolceParanoiaLeads = [];
+    
+    // 3. Per ogni evento futuro, controlla se serve promemoria
+    events.forEach(event => {
+        const dataAppuntamento = new Date(event.start);
+        const oraAppuntamento = dataAppuntamento.getHours();
+        
+        // Solo eventi futuri
+        if (dataAppuntamento < oggi) return;
+        
+        // Calcola giorni mancanti
+        const diffTime = dataAppuntamento - oggi;
+        const giorniMancanti = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // Estrai info lead dall'evento
+        const leadInfo = extractLeadFromEvent(event);
+        if (!leadInfo.nome) return;
+        
+        // Cerca ultimo messaggio a questo lead in cronologia
+        const ultimoMessaggio = cronologia.find(entry => {
+            const matchTelefono = entry.telefono && leadInfo.telefono && 
+                                 normalizePhone(entry.telefono) === normalizePhone(leadInfo.telefono);
+            const matchNome = entry.nome === leadInfo.nome && 
+                            (entry.cognome === leadInfo.cognome || !entry.cognome);
+            return matchTelefono || matchNome;
+        });
+        
+        let giorniDaUltimoMessaggio = 999; // Default: mai inviato
+        if (ultimoMessaggio) {
+            const dataUltimoMsg = new Date(ultimoMessaggio.timestamp);
+            const diffMsg = oggi - dataUltimoMsg;
+            giorniDaUltimoMessaggio = Math.floor(diffMsg / (1000 * 60 * 60 * 24));
+        }
+        
+        // 🎯 REGOLA DOLCE PARANOIA (provvisoria - tu la aggiusti)
+        let mostraLead = false;
+        const isMattina = oraAppuntamento < 14;
+        
+        if (isMattina) {
+            // Appuntamento MATTINA: mostra se 2+ giorni passati E 2-3 giorni mancanti
+            mostraLead = giorniDaUltimoMessaggio >= 2 && giorniMancanti >= 2 && giorniMancanti <= 3;
+        } else {
+            // Appuntamento POMERIGGIO: mostra se 3+ giorni passati E 1-2 giorni mancanti
+            mostraLead = giorniDaUltimoMessaggio >= 3 && giorniMancanti >= 1 && giorniMancanti <= 2;
+        }
+        
+        if (mostraLead) {
+            dolceParanoiaLeads.push({
+                event: event,
+                nome: leadInfo.nome,
+                cognome: leadInfo.cognome,
+                telefono: leadInfo.telefono,
+                dataAppuntamento: dataAppuntamento,
+                giorniMancanti: giorniMancanti,
+                giorniDaUltimoMessaggio: giorniDaUltimoMessaggio,
+                oraAppuntamento: oraAppuntamento
+            });
+        }
+    });
+    
+    console.log(`✅ Trovati ${dolceParanoiaLeads.length} lead per Dolce Paranoia`);
+    return dolceParanoiaLeads;
+}
+
+function extractLeadFromEvent(event) {
+    const summary = event.summary || '';
+    const description = event.description || '';
+    
+    // Estrai nome/cognome
+    let nome = '', cognome = '';
+    const nomeParts = summary.split(' ').filter(p => p && p !== 'X');
+    if (nomeParts.length > 0) nome = nomeParts[0];
+    if (nomeParts.length > 1) cognome = nomeParts.slice(1).join(' ');
+    
+    // Estrai telefono
+    let telefono = '';
+    const telMatch = description.match(/\+?\d[\d\s\-\(\)]{8,}/);
+    if (telMatch) telefono = telMatch[0];
+    
+    return { nome, cognome, telefono };
+}
+
+function normalizePhone(phone) {
+    if (!phone) return '';
+    return phone.replace(/[\s\-\(\)\+]/g, '');
+}
+
+async function renderDolceParanoiaList() {
+    const container = document.getElementById('dolceParanoiaList');
+    if (!container) return;
+    
+    if (!window.accessToken) {
+        container.innerHTML = '<p class="placeholder-text">🔒 Fai login Google per vedere i promemoria</p>';
+        return;
+    }
+    
+    // Mostra loader
+    container.innerHTML = '<p style="text-align:center;color:var(--gray-500);"><i class="fas fa-spinner fa-spin"></i> Calcolo lead...</p>';
+    
+    const leads = await getDolceParanoiaLeads();
+    
+    if (leads.length === 0) {
+        container.innerHTML = '<p class="placeholder-text">✅ Nessun promemoria necessario oggi</p>';
+        return;
+    }
+    
+    let html = '<div style="margin-bottom: 15px; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">';
+    html += '<strong style="color: #92400e;">🔔 ' + leads.length + ' promemoria da inviare</strong>';
+    html += '</div>';
+    
+    leads.forEach((lead, index) => {
+        const dataStr = lead.dataAppuntamento.toLocaleDateString('it-IT');
+        const oraStr = lead.dataAppuntamento.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+        
+        let giorniText = '';
+        if (lead.giorniMancanti === 0) giorniText = 'oggi';
+        else if (lead.giorniMancanti === 1) giorniText = 'domani';
+        else if (lead.giorniMancanti === 2) giorniText = 'dopodomani';
+        else giorniText = `tra ${lead.giorniMancanti} giorni`;
+        
+        html += `
+            <div style="padding: 15px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <div>
+                        <strong style="font-size: 16px; color: var(--gray-900);">📱 ${lead.nome} ${lead.cognome || ''}</strong>
+                        <div style="font-size: 13px; color: var(--gray-600); margin-top: 4px;">
+                            📅 ${dataStr} ore ${oraStr} <span style="color: #f59e0b; font-weight: 600;">(${giorniText})</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--gray-500); margin-top: 2px;">
+                            ⏰ Ultimo messaggio: ${lead.giorniDaUltimoMessaggio} giorni fa
+                        </div>
+                    </div>
+                    <button 
+                        type="button" 
+                        class="btn btn-primary" 
+                        style="padding: 8px 16px; font-size: 14px;"
+                        onclick="fillFormFromDolceParanoia(${index})">
+                        Seleziona
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    // Salva leads in window per accesso da fillFormFromDolceParanoia
+    window.currentDolceParanoiaLeads = leads;
+}
+
+window.fillFormFromDolceParanoia = function(index) {
+    const leads = window.currentDolceParanoiaLeads;
+    if (!leads || !leads[index]) return;
+    
+    const lead = leads[index];
+    
+    // Riempi form
+    document.getElementById('nome').value = lead.nome;
+    document.getElementById('cognome').value = lead.cognome || '';
+    document.getElementById('telefono').value = lead.telefono || '';
+    
+    // Imposta tipo messaggio a Dolce Paranoia
+    const tipoSelect = document.getElementById('tipoMessaggio');
+    if (tipoSelect) {
+        tipoSelect.value = 'dolce_paranoia';
+    }
+    
+    // Imposta orario
+    const oraStr = lead.dataAppuntamento.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('orario').value = oraStr;
+    
+    // Scroll to form
+    document.getElementById('messageForm').scrollIntoView({ behavior: 'smooth' });
+    
+    // Update preview
+    updatePreview();
+    
+    showNotification('📝 Form compilato con ' + lead.nome, 'success');
+};
 
 // ===== CRONOLOGIA =====
 async function saveToCronologia(nome, cognome, telefono, messaggio, servizio, societa) {
@@ -815,11 +1064,30 @@ async function loadTemplates() {
                 nome: 'Memo del Giorno',
                 categoria: 'Memo',
                 testo: '{BB} {NN}, ti confermo che per le {HH} siam collegati, a dopo. Dammi riscontro, grazie'
+            },
+            {
+                id: 'dolce_paranoia',
+                nome: 'Dolce Paranoia',
+                categoria: 'Promemoria',
+                testo: '{BB} {NN}, ti ricordo che {GG} alle {HH} abbiamo la videochiamata. Ci sei? Confermami per favore, grazie'
             }
         ];
         templates = defaultTemplates;
         localStorage.setItem('sgmess_templates_local', JSON.stringify(templates));
         console.log('✅ Template default creati e salvati');
+    }
+    
+    // Se esistono solo 2 template (vecchia versione), aggiungi il terzo
+    if (templates.length === 2 && !templates.find(t => t.id === 'dolce_paranoia')) {
+        console.log('🔄 Aggiornamento: aggiungo Dolce Paranoia...');
+        templates.push({
+            id: 'dolce_paranoia',
+            nome: 'Dolce Paranoia',
+            categoria: 'Promemoria',
+            testo: '{BB} {NN}, ti ricordo che {GG} alle {HH} abbiamo la videochiamata. Ci sei? Confermami per favore, grazie'
+        });
+        localStorage.setItem('sgmess_templates_local', JSON.stringify(templates));
+        console.log('✅ Dolce Paranoia aggiunto');
     }
     
     // Se esiste solo 1 template (vecchia versione), aggiungi il secondo
