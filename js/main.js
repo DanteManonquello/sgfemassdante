@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.2.29 - Lead colorati + Cronologia persistente + Date navigation
+   TESTmess v2.2.41 - Fix Rubrica Scan 12 Mesi
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.40 inizializzato');
+    console.log('🚀 TESTmess v2.2.41 inizializzato');
     
     setupSidebar();
     setupNavigation();
