@@ -1,5 +1,8 @@
 /* ================================================================================
-   GOOGLE AUTH - VERSIONE 2.2.39
+   GOOGLE AUTH - VERSIONE 2.2.40
+   
+   CHANGELOG 2.2.40:
+   - ✅ Push GitHub completato e configurato per future modifiche
    
    CHANGELOG 2.2.39:
    - ✅ FIX OAUTH: Rimosso 'select_account' prompt per evitare richiesta permessi ogni volta
