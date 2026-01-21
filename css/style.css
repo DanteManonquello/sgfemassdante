@@ -1060,3 +1060,73 @@ body {
     height: 16px;
 }
 
+
+/* ===== DOLCE PARANOIA - LISTA SCROLLABILE ===== */
+#dolceParanoiaList {
+    max-height: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.dp-lead-item {
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 4px solid #8b5cf6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+}
+
+.dp-lead-item:hover {
+    background: #f9fafb;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dp-lead-info {
+    flex: 1;
+}
+
+.dp-lead-name {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.dp-lead-date {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 2px;
+}
+
+.dp-lead-meta {
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+.btn-select-dp {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-select-dp:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(139, 92, 246, 0.3);
+}
+
+.dp-empty {
+    text-align: center;
+    padding: 30px;
+    color: #9ca3af;
+    font-style: italic;
+}

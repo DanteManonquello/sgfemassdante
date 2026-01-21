@@ -184,10 +184,25 @@ async function setupEventListeners() {
         });
     }
     
-    // Update preview su tutti i campi
+    // Update preview su tutti i campi + Mostra/Nascondi Dolce Paranoia card
     ['giorno', 'orario', 'servizio', 'tipoMessaggio'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('change', async () => await updatePreview());
+        if (el) el.addEventListener('change', async () => {
+            await updatePreview();
+            
+            // 🔔 Mostra/Nascondi Dolce Paranoia card
+            if (id === 'tipoMessaggio') {
+                const card = document.getElementById('dolceParanoiaCard');
+                if (card) {
+                    if (el.value === 'dolce_paranoia') {
+                        card.style.display = 'block';
+                        await renderDolceParanoiaList();
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            }
+        });
         if (el && id === 'orario') el.addEventListener('input', async () => await updatePreview());
     });
     
@@ -654,7 +669,7 @@ function showNotification(text, type = 'success') {
 
 // ===== DOLCE PARANOIA =====
 async function getDolceParanoiaLeads() {
-    console.log('🔔 Calcolo lead Dolce Paranoia...');
+    console.log('🔔 Calcolo lead Dolce Paranoia (v2.5.1 - nuova logica)...');
     
     if (!window.accessToken) {
         console.warn('⚠️ No accessToken per Dolce Paranoia');
@@ -670,6 +685,11 @@ async function getDolceParanoiaLeads() {
         } catch (e) {
             console.error('❌ Errore caricamento cronologia:', e);
         }
+    }
+    
+    if (cronologia.length === 0) {
+        console.log('⚠️ Nessuna cronologia messaggi');
+        return [];
     }
     
     // 2. Carica eventi calendario
@@ -689,63 +709,73 @@ async function getDolceParanoiaLeads() {
     // 3. Per ogni evento futuro, controlla se serve promemoria
     events.forEach(event => {
         const dataAppuntamento = new Date(event.start);
-        const oraAppuntamento = dataAppuntamento.getHours();
+        dataAppuntamento.setHours(0, 0, 0, 0);
         
         // Solo eventi futuri
-        if (dataAppuntamento < oggi) return;
-        
-        // Calcola giorni mancanti
-        const diffTime = dataAppuntamento - oggi;
-        const giorniMancanti = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (dataAppuntamento <= oggi) return;
         
         // Estrai info lead dall'evento
         const leadInfo = extractLeadFromEvent(event);
         if (!leadInfo.nome) return;
         
-        // Cerca ultimo messaggio a questo lead in cronologia
-        const ultimoMessaggio = cronologia.find(entry => {
-            const matchTelefono = entry.telefono && leadInfo.telefono && 
-                                 normalizePhone(entry.telefono) === normalizePhone(leadInfo.telefono);
-            const matchNome = entry.nome === leadInfo.nome && 
-                            (entry.cognome === leadInfo.cognome || !entry.cognome);
-            return matchTelefono || matchNome;
-        });
+        // 🎯 CERCA IL PRIMO MESSAGGIO (tipo "primo_messaggio") inviato a questo lead
+        const primoMessaggio = findPrimoMessaggio(leadInfo, cronologia);
         
-        let giorniDaUltimoMessaggio = 999; // Default: mai inviato
-        if (ultimoMessaggio) {
-            const dataUltimoMsg = new Date(ultimoMessaggio.timestamp);
-            const diffMsg = oggi - dataUltimoMsg;
-            giorniDaUltimoMessaggio = Math.floor(diffMsg / (1000 * 60 * 60 * 24));
+        if (!primoMessaggio) {
+            // Nessun primo messaggio trovato → skip
+            console.log(`⏭️ Skip ${leadInfo.nome}: nessun primo messaggio trovato`);
+            return;
         }
         
-        // 🎯 REGOLA DOLCE PARANOIA (provvisoria - tu la aggiusti)
-        let mostraLead = false;
-        const isMattina = oraAppuntamento < 14;
+        // Calcola distanza: data_appuntamento - data_primo_messaggio
+        const dataPrimoMsg = new Date(primoMessaggio.timestamp);
+        dataPrimoMsg.setHours(0, 0, 0, 0);
         
-        if (isMattina) {
-            // Appuntamento MATTINA: mostra se 2+ giorni passati E 2-3 giorni mancanti
-            mostraLead = giorniDaUltimoMessaggio >= 2 && giorniMancanti >= 2 && giorniMancanti <= 3;
-        } else {
-            // Appuntamento POMERIGGIO: mostra se 3+ giorni passati E 1-2 giorni mancanti
-            mostraLead = giorniDaUltimoMessaggio >= 3 && giorniMancanti >= 1 && giorniMancanti <= 2;
-        }
+        const diffTime = dataAppuntamento - dataPrimoMsg;
+        const giorniDistanza = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        if (mostraLead) {
+        console.log(`📊 ${leadInfo.nome}: distanza fissazione = ${giorniDistanza} giorni`);
+        
+        // 🎯 REGOLA UNICA: distanza >= 2 giorni
+        if (giorniDistanza >= 2) {
             dolceParanoiaLeads.push({
                 event: event,
                 nome: leadInfo.nome,
                 cognome: leadInfo.cognome,
                 telefono: leadInfo.telefono,
-                dataAppuntamento: dataAppuntamento,
-                giorniMancanti: giorniMancanti,
-                giorniDaUltimoMessaggio: giorniDaUltimoMessaggio,
-                oraAppuntamento: oraAppuntamento
+                dataAppuntamento: new Date(event.start), // Con ora
+                giorniDistanza: giorniDistanza,
+                dataPrimoMessaggio: primoMessaggio.timestamp
             });
         }
     });
     
     console.log(`✅ Trovati ${dolceParanoiaLeads.length} lead per Dolce Paranoia`);
     return dolceParanoiaLeads;
+}
+
+// Helper: trova il PRIMO messaggio (tipo "primo_messaggio") per un lead
+function findPrimoMessaggio(leadInfo, cronologia) {
+    // Filtra solo messaggi tipo "primo_messaggio"
+    const messaggiPrimi = cronologia.filter(entry => 
+        entry.tipoMessaggio === 'primo_messaggio' || !entry.tipoMessaggio // Retrocompat: se non ha tipo, assume primo
+    );
+    
+    // Cerca match per telefono o nome+cognome
+    const messaggiLead = messaggiPrimi.filter(entry => {
+        const matchTelefono = entry.telefono && leadInfo.telefono && 
+                             normalizePhone(entry.telefono) === normalizePhone(leadInfo.telefono);
+        const matchNome = entry.nome === leadInfo.nome && 
+                        (entry.cognome === leadInfo.cognome || !entry.cognome);
+        return matchTelefono || matchNome;
+    });
+    
+    if (messaggiLead.length === 0) return null;
+    
+    // Prendi il messaggio più VECCHIO (primo inviato)
+    messaggiLead.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    
+    return messaggiLead[0];
 }
 
 function extractLeadFromEvent(event) {
@@ -786,40 +816,34 @@ async function renderDolceParanoiaList() {
     const leads = await getDolceParanoiaLeads();
     
     if (leads.length === 0) {
-        container.innerHTML = '<p class="placeholder-text">✅ Nessun promemoria necessario oggi</p>';
+        container.innerHTML = '<p class="placeholder-text">✅ Nessun promemoria necessario</p>';
         return;
     }
     
-    let html = '<div style="margin-bottom: 15px; padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px;">';
-    html += '<strong style="color: #92400e;">🔔 ' + leads.length + ' promemoria da inviare</strong>';
+    let html = '<div style="margin-bottom: 10px; padding: 10px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 6px;">';
+    html += '<strong style="color: #92400e; font-size: 14px;">🔔 ' + leads.length + ' promemoria da inviare</strong>';
     html += '</div>';
     
     leads.forEach((lead, index) => {
         const dataStr = lead.dataAppuntamento.toLocaleDateString('it-IT');
         const oraStr = lead.dataAppuntamento.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
         
-        let giorniText = '';
-        if (lead.giorniMancanti === 0) giorniText = 'oggi';
-        else if (lead.giorniMancanti === 1) giorniText = 'domani';
-        else if (lead.giorniMancanti === 2) giorniText = 'dopodomani';
-        else giorniText = `tra ${lead.giorniMancanti} giorni`;
-        
         html += `
-            <div style="padding: 15px; background: white; border: 2px solid #e5e7eb; border-radius: 12px; margin-bottom: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <div>
-                        <strong style="font-size: 16px; color: var(--gray-900);">📱 ${lead.nome} ${lead.cognome || ''}</strong>
-                        <div style="font-size: 13px; color: var(--gray-600); margin-top: 4px;">
-                            📅 ${dataStr} ore ${oraStr} <span style="color: #f59e0b; font-weight: 600;">(${giorniText})</span>
+            <div style="padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1;">
+                        <strong style="font-size: 15px; color: var(--gray-900);">📱 ${lead.nome} ${lead.cognome || ''}</strong>
+                        <div style="font-size: 13px; color: var(--gray-600); margin-top: 3px;">
+                            📅 ${dataStr} ore ${oraStr}
                         </div>
-                        <div style="font-size: 12px; color: var(--gray-500); margin-top: 2px;">
-                            ⏰ Ultimo messaggio: ${lead.giorniDaUltimoMessaggio} giorni fa
+                        <div style="font-size: 12px; color: #f59e0b; margin-top: 2px; font-weight: 600;">
+                            📌 Fissato ${lead.giorniDistanza} ${lead.giorniDistanza === 1 ? 'giorno' : 'giorni'} fa
                         </div>
                     </div>
                     <button 
                         type="button" 
                         class="btn btn-primary" 
-                        style="padding: 8px 16px; font-size: 14px;"
+                        style="padding: 6px 12px; font-size: 13px;"
                         onclick="fillFormFromDolceParanoia(${index})">
                         Seleziona
                     </button>

@@ -5,8 +5,8 @@
 // Configurazione centralizzata della versione
 const APP_CONFIG = {
     name: 'TESTmess',
-    version: '2.5.0',
-    fullName: 'v2.5.0 by Dante',
+    version: '2.5.1',
+    fullName: 'v2.5.1 by Dante',
     description: 'Stock Gain Messenger',
     author: 'Dante',
     lastUpdate: '2026-01-21 - Dolce Paranoia: promemoria intelligenti per lead che potrebbero dimenticarsi'
