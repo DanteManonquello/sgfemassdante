@@ -449,26 +449,12 @@ async function updatePreview() {
     // 🆕 LOGICA {GG} DINAMICA per Dolce Paranoia
     let GG = giorno;
     if (tipoMessaggio === 'dolce_paranoia') {
-        // Calcola giorni mancanti dall'appuntamento
-        // Se utente ha selezionato un lead da Dolce Paranoia, usa quella data
-        const selectedLead = document.getElementById('selectLead');
-        if (selectedLead && selectedLead.value) {
-            const selectedOption = selectedLead.options[selectedLead.selectedIndex];
-            if (selectedOption && selectedOption.dataset.eventData) {
-                const event = JSON.parse(selectedOption.dataset.eventData);
-                const dataAppuntamento = new Date(event.start);
-                const oggi = new Date();
-                oggi.setHours(0, 0, 0, 0);
-                dataAppuntamento.setHours(0, 0, 0, 0);
-                
-                const diffTime = dataAppuntamento - oggi;
-                const giorniMancanti = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                
-                if (giorniMancanti === 0) GG = "oggi";
-                else if (giorniMancanti === 1) GG = "domani";
-                else if (giorniMancanti === 2) GG = "dopodomani";
-                else GG = `tra ${giorniMancanti} giorni`;
-            }
+        // Per Dolce Paranoia: usa giorno settimana in lettere (es. "martedì")
+        const giornoSelezionato = document.getElementById('giorno').value;
+        if (giornoSelezionato) {
+            const data = new Date(giornoSelezionato);
+            const giornoSettimana = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+            GG = giornoSettimana[data.getDay()];
         }
     }
     
@@ -676,19 +662,35 @@ async function getDolceParanoiaLeads() {
         return [];
     }
     
-    // 1. Carica cronologia da Drive
+    // 1. Carica cronologia da Drive (con fallback localStorage)
     let cronologia = [];
     if (window.DriveStorage) {
         try {
             const driveData = await window.DriveStorage.load(STORAGE_KEYS.CRONOLOGIA);
-            if (driveData) cronologia = driveData;
+            if (driveData) {
+                cronologia = driveData;
+                console.log(`📦 Cronologia da Drive: ${cronologia.length} messaggi`);
+            }
         } catch (e) {
-            console.error('❌ Errore caricamento cronologia:', e);
+            console.warn('⚠️ Drive fallito, uso fallback localStorage');
+            // Fallback: localStorage
+            const localData = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
+            if (localData) {
+                cronologia = JSON.parse(localData);
+                console.log(`💾 Cronologia da localStorage: ${cronologia.length} messaggi`);
+            }
+        }
+    } else {
+        // Nessun DriveStorage, uso localStorage
+        const localData = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
+        if (localData) {
+            cronologia = JSON.parse(localData);
+            console.log(`💾 Cronologia da localStorage: ${cronologia.length} messaggi`);
         }
     }
     
     if (cronologia.length === 0) {
-        console.log('⚠️ Nessuna cronologia messaggi');
+        console.log('⚠️ Nessuna cronologia messaggi - Invia almeno 1 "Primo Messaggio" per usare Dolce Paranoia');
         return [];
     }
     
@@ -816,7 +818,14 @@ async function renderDolceParanoiaList() {
     const leads = await getDolceParanoiaLeads();
     
     if (leads.length === 0) {
-        container.innerHTML = '<p class="placeholder-text">✅ Nessun promemoria necessario</p>';
+        container.innerHTML = `
+            <div class="dp-empty">
+                <p style="margin-bottom: 10px;">✅ Nessun promemoria necessario</p>
+                <p style="font-size: 13px; color: #9ca3af;">
+                    💡 Invia almeno 1 "Primo Messaggio" per vedere lead qui
+                </p>
+            </div>
+        `;
         return;
     }
     
@@ -1093,7 +1102,7 @@ async function loadTemplates() {
                 id: 'dolce_paranoia',
                 nome: 'Dolce Paranoia',
                 categoria: 'Promemoria',
-                testo: '{BB} {NN}, ti ricordo che {GG} alle {HH} abbiamo la videochiamata. Ci sei? Confermami per favore, grazie'
+                testo: '{BB} {NN}, ti confermo per {GG} alle {HH}. Dammi riscontro, grazie'
             }
         ];
         templates = defaultTemplates;
@@ -1108,7 +1117,7 @@ async function loadTemplates() {
             id: 'dolce_paranoia',
             nome: 'Dolce Paranoia',
             categoria: 'Promemoria',
-            testo: '{BB} {NN}, ti ricordo che {GG} alle {HH} abbiamo la videochiamata. Ci sei? Confermami per favore, grazie'
+            testo: '{BB} {NN}, ti confermo per {GG} alle {HH}. Dammi riscontro, grazie'
         });
         localStorage.setItem('sgmess_templates_local', JSON.stringify(templates));
         console.log('✅ Dolce Paranoia aggiunto');
