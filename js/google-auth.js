@@ -1,5 +1,10 @@
 /* ================================================================================
-   GOOGLE AUTH - VERSIONE 2.2.24
+   GOOGLE AUTH - VERSIONE 2.2.39
+   
+   CHANGELOG 2.2.39:
+   - ✅ FIX OAUTH: Rimosso 'select_account' prompt per evitare richiesta permessi ogni volta
+   - ✅ Token salvato viene riutilizzato automaticamente
+   - ✅ Schermata consenso appare solo al primo login (o se token scaduto)
    
    CHANGELOG 2.2.24:
    - ✅ FIX DEFINITIVO: Nuovo Client ID OAuth dedicato al progetto
@@ -219,11 +224,11 @@ function handleAuthClick() {
             handleAuthResponse(resp);
         };
         
-        // POPUP MODE con select_account
+        // POPUP MODE - senza forzare select_account (usa token salvato se presente)
         try {
             authAttempted = true;
             tokenClient.requestAccessToken({ 
-                prompt: 'select_account'
+                prompt: '' // Vuoto = non forzare schermata permessi se token già valido
             });
         } catch (popupError) {
             clearTimeout(authTimeout);

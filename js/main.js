@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.38 inizializzato');
+    console.log('🚀 TESTmess v2.2.39 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -210,8 +210,15 @@ async function setupEventListeners() {
     const selectDay = document.getElementById('selectDay');
     
     if (prevDayBtn && nextDayBtn && selectDay) {
-        prevDayBtn.addEventListener('click', () => {
-            if (!selectDay.value) return;
+        prevDayBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Previeni comportamenti default
+            e.stopPropagation();
+            
+            // Se nessuna data selezionata, inizializza con oggi
+            if (!selectDay.value) {
+                const today = new Date();
+                selectDay.value = today.toISOString().split('T')[0];
+            }
             
             const currentDate = new Date(selectDay.value + 'T00:00:00');
             const today = new Date();
@@ -225,11 +232,21 @@ async function setupEventListeners() {
                 currentDate.setDate(currentDate.getDate() - 1);
                 selectDay.value = currentDate.toISOString().split('T')[0];
                 selectDay.dispatchEvent(new Event('change'));
+                console.log('📅 Giorno precedente:', selectDay.value);
+            } else {
+                showNotification('⚠️ Limite raggiunto: -90 giorni', 'warning');
             }
         });
         
-        nextDayBtn.addEventListener('click', () => {
-            if (!selectDay.value) return;
+        nextDayBtn.addEventListener('click', (e) => {
+            e.preventDefault(); // Previeni comportamenti default
+            e.stopPropagation();
+            
+            // Se nessuna data selezionata, inizializza con oggi
+            if (!selectDay.value) {
+                const today = new Date();
+                selectDay.value = today.toISOString().split('T')[0];
+            }
             
             const currentDate = new Date(selectDay.value + 'T00:00:00');
             const today = new Date();
@@ -243,6 +260,9 @@ async function setupEventListeners() {
                 currentDate.setDate(currentDate.getDate() + 1);
                 selectDay.value = currentDate.toISOString().split('T')[0];
                 selectDay.dispatchEvent(new Event('change'));
+                console.log('📅 Giorno successivo:', selectDay.value);
+            } else {
+                showNotification('⚠️ Limite raggiunto: +90 giorni', 'warning');
             }
         });
     }
@@ -801,4 +821,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.38 caricato');
+console.log('✅ Main.js v2.2.39 caricato');

@@ -5,11 +5,11 @@
 // Configurazione centralizzata della versione
 const APP_CONFIG = {
     name: 'TESTmess',
-    version: '2.2.38',
-    fullName: 'v2.2.38 by Dante',
+    version: '2.2.39',
+    fullName: 'v2.2.39 by Dante',
     description: 'Stock Gain Messenger',
     author: 'Dante',
-    lastUpdate: '2026-01-21 - FEATURE: Dropdown selezione calendario nella Home + Fix OAuth redirect'
+    lastUpdate: '2026-01-21 - FIX: OAuth no re-consent + Freccette navigazione giorni'
 };
 
 // ===== GITHUB AUTO-PUSH CONFIGURATION =====
