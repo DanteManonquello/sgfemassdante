@@ -516,6 +516,51 @@ body {
     text-align: center;
 }
 
+/* ===== DATE NAVIGATION COMPACT (v2.2.40) ===== */
+.date-input-wrapper-compact {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-nav-btn-compact {
+    background: var(--whatsapp-green);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.date-nav-btn-compact:hover {
+    background: var(--whatsapp-green-dark);
+    transform: scale(1.05);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.date-nav-btn-compact:active {
+    transform: scale(0.95);
+}
+
+.date-picker-compact {
+    flex: 1;
+    padding: 10px 12px !important;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 600;
+    min-width: 0;
+}
+
 /* ===== BUTTONS ===== */
 .button-group {
     display: flex;

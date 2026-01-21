@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.39 inizializzato');
+    console.log('🚀 TESTmess v2.2.40 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -209,10 +209,20 @@ async function setupEventListeners() {
     const nextDayBtn = document.getElementById('nextDayBtn');
     const selectDay = document.getElementById('selectDay');
     
+    // Debounce per prevenire click multipli
+    let isNavigating = false;
+    
     if (prevDayBtn && nextDayBtn && selectDay) {
-        prevDayBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Previeni comportamenti default
+        prevDayBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
             e.stopPropagation();
+            
+            // Previeni click multipli
+            if (isNavigating) {
+                console.log('⏳ Navigazione in corso, ignoro click...');
+                return;
+            }
+            isNavigating = true;
             
             // Se nessuna data selezionata, inizializza con oggi
             if (!selectDay.value) {
@@ -220,7 +230,7 @@ async function setupEventListeners() {
                 selectDay.value = today.toISOString().split('T')[0];
             }
             
-            const currentDate = new Date(selectDay.value + 'T00:00:00');
+            const currentDate = new Date(selectDay.value + 'T12:00:00'); // Usa mezzogiorno per evitare problemi timezone
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -232,15 +242,25 @@ async function setupEventListeners() {
                 currentDate.setDate(currentDate.getDate() - 1);
                 selectDay.value = currentDate.toISOString().split('T')[0];
                 selectDay.dispatchEvent(new Event('change'));
-                console.log('📅 Giorno precedente:', selectDay.value);
+                console.log('📅 ← Giorno precedente:', selectDay.value);
             } else {
                 showNotification('⚠️ Limite raggiunto: -90 giorni', 'warning');
             }
+            
+            // Reset flag dopo 300ms
+            setTimeout(() => { isNavigating = false; }, 300);
         });
         
-        nextDayBtn.addEventListener('click', (e) => {
-            e.preventDefault(); // Previeni comportamenti default
+        nextDayBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
             e.stopPropagation();
+            
+            // Previeni click multipli
+            if (isNavigating) {
+                console.log('⏳ Navigazione in corso, ignoro click...');
+                return;
+            }
+            isNavigating = true;
             
             // Se nessuna data selezionata, inizializza con oggi
             if (!selectDay.value) {
@@ -248,7 +268,7 @@ async function setupEventListeners() {
                 selectDay.value = today.toISOString().split('T')[0];
             }
             
-            const currentDate = new Date(selectDay.value + 'T00:00:00');
+            const currentDate = new Date(selectDay.value + 'T12:00:00'); // Usa mezzogiorno per evitare problemi timezone
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
@@ -260,10 +280,13 @@ async function setupEventListeners() {
                 currentDate.setDate(currentDate.getDate() + 1);
                 selectDay.value = currentDate.toISOString().split('T')[0];
                 selectDay.dispatchEvent(new Event('change'));
-                console.log('📅 Giorno successivo:', selectDay.value);
+                console.log('📅 → Giorno successivo:', selectDay.value);
             } else {
                 showNotification('⚠️ Limite raggiunto: +90 giorni', 'warning');
             }
+            
+            // Reset flag dopo 300ms
+            setTimeout(() => { isNavigating = false; }, 300);
         });
     }
     
@@ -821,4 +844,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.39 caricato');
+console.log('✅ Main.js v2.2.40 caricato');
