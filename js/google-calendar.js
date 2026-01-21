@@ -1,5 +1,11 @@
 /* ================================================================================
-   GOOGLE CALENDAR SYNC - TESTmess v2.2.37
+   GOOGLE CALENDAR SYNC - TESTmess v2.2.38
+   
+   CHANGELOG v2.2.38:
+   - ✅ DROPDOWN HOME: Aggiunto filtro calendario nella sezione "Appuntamenti del Giorno"
+   - ✅ SELEZIONE PERSISTENTE: Scelta calendario salvata in localStorage
+   - ✅ FILTRO DINAMICO: Lead filtrati automaticamente per calendario selezionato
+   - ✅ UX MIGLIORATA: Notifica quando si cambia filtro calendario
    
    CHANGELOG v2.2.37:
    - 🔧 FIX SINTASSI: Rimosso blocco try-catch duplicato (righe 261-269)
@@ -32,7 +38,8 @@ const STORAGE_KEYS_CALENDAR = {
     LAST_SYNC: 'sgmess_last_sync',
     CONTACTED_LEADS: 'sgmess_contacted_leads', // Lead a cui abbiamo già mandato messaggi
     LOADED_DAYS_BACK: 'sgmess_loaded_days_back', // Quanti giorni indietro abbiamo caricato
-    SELECTED_CALENDARS: 'sgmess_selected_calendars' // Calendari selezionati per il filtro
+    SELECTED_CALENDARS: 'sgmess_selected_calendars', // Calendari selezionati per il filtro (sezione calendario)
+    HOME_CALENDAR_FILTER: 'sgmess_home_calendar_filter' // Calendario selezionato nella home
 };
 
 let calendarSyncInterval = null;
@@ -160,6 +167,12 @@ async function syncCalendarEvents(silent = false, loadMore = false) {
         }
         
         console.log(`✅ Trovati ${targetCalendars.length} calendari:`, targetCalendars.map(c => c.summary));
+        
+        // Salva lista calendari disponibili globalmente
+        availableCalendars = targetCalendars;
+        
+        // Popola dropdown home con calendari
+        populateHomeCalendarDropdown(targetCalendars);
         
         // STEP 3: Determina range temporale
         let timeMin, timeMax;
@@ -434,6 +447,39 @@ function getFilteredEventsByCalendar() {
         return selectedCalendars.includes(event.calendarId) && !shouldSkipEvent(event);
     });
 }
+
+// ===== POPOLA DROPDOWN CALENDARIO NELLA HOME =====
+function populateHomeCalendarDropdown(calendars) {
+    const dropdown = document.getElementById('selectCalendarFilter');
+    if (!dropdown) return;
+    
+    // Carica selezione salvata
+    const savedCalendar = localStorage.getItem(STORAGE_KEYS_CALENDAR.HOME_CALENDAR_FILTER) || 'all';
+    
+    // Reset dropdown
+    dropdown.innerHTML = '<option value="all">-- Tutti i Calendari --</option>';
+    
+    // Aggiungi opzione per ogni calendario
+    calendars.forEach(calendar => {
+        const option = document.createElement('option');
+        option.value = calendar.id;
+        option.textContent = calendar.summary;
+        if (calendar.id === savedCalendar) {
+            option.selected = true;
+        }
+        dropdown.appendChild(option);
+    });
+    
+    console.log(`✅ Dropdown home popolato con ${calendars.length} calendari`);
+}
+
+// ===== GET CALENDARIO SELEZIONATO NELLA HOME =====
+function getHomeSelectedCalendar() {
+    const dropdown = document.getElementById('selectCalendarFilter');
+    if (!dropdown) return 'all';
+    return dropdown.value || 'all';
+}
+
 function loadSavedEvents() {
     const eventsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
     if (eventsJSON) {
@@ -480,17 +526,22 @@ function updateLeadSelectorByDate(dateString) {
     const selectLead = document.getElementById('selectLead');
     if (!selectLead) return;
     
-    // USA EVENTI FILTRATI (escludi "X" + filtra per calendario)
-    const events = getFilteredEventsByCalendar();
+    // Carica TUTTI gli eventi salvati (non filtrati)
+    const allEventsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
+    const allEvents = JSON.parse(allEventsJSON || '[]');
     const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
-    const selectedCalendars = getSelectedCalendars();
     
-    // Filtra eventi per la data selezionata + escludi "X" + filtra per calendario selezionato
-    const dayEvents = events.filter(event => {
+    // Ottieni calendario selezionato nella home
+    const homeCalendarFilter = getHomeSelectedCalendar();
+    
+    // Filtra eventi per la data selezionata + escludi "X" + filtra per calendario home
+    const dayEvents = allEvents.filter(event => {
         const eventDate = new Date(event.start);
         const isCorrectDate = eventDate.toDateString() === selectedDate.toDateString();
         const isNotX = !shouldSkipEvent(event);
-        const isSelectedCalendar = selectedCalendars.length === 0 || selectedCalendars.includes(event.calendarId);
+        
+        // Filtra per calendario home (se non è "all")
+        const isSelectedCalendar = homeCalendarFilter === 'all' || event.calendarId === homeCalendarFilter;
         
         return isCorrectDate && isNotX && isSelectedCalendar;
     });
@@ -1044,6 +1095,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Cambio calendario nella home
+    const selectCalendarFilter = document.getElementById('selectCalendarFilter');
+    if (selectCalendarFilter) {
+        selectCalendarFilter.addEventListener('change', function() {
+            const calendarId = this.value;
+            
+            // Salva selezione in localStorage
+            localStorage.setItem(STORAGE_KEYS_CALENDAR.HOME_CALENDAR_FILTER, calendarId);
+            
+            // Ricarica lead con nuovo filtro
+            const selectDay = document.getElementById('selectDay');
+            if (selectDay && selectDay.value) {
+                updateLeadSelectorByDate(selectDay.value);
+                
+                const calendarName = this.options[this.selectedIndex].textContent;
+                showNotification(`📅 Filtro applicato: ${calendarName}`, 'success');
+            }
+            
+            console.log('📅 Calendario home selezionato:', calendarId);
+        });
+    }
+    
     // Cambio lead
     const selectLead = document.getElementById('selectLead');
     if (selectLead) {
@@ -1068,4 +1141,4 @@ window.updateLeadsList = updateLeadsList;
 window.getFilteredEventsByCalendar = getFilteredEventsByCalendar;
 window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 
-console.log('✅ Google Calendar module v2.2.37 caricato - Fix sintassi + Hamburger funzionante');
+console.log('✅ Google Calendar module v2.2.38 caricato - Dropdown filtro calendario nella Home');

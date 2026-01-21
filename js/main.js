@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.2.37 inizializzato');
+    console.log('🚀 TESTmess v2.2.38 inizializzato');
     
     setupSidebar();
     setupNavigation();
@@ -801,4 +801,4 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.37 caricato');
+console.log('✅ Main.js v2.2.38 caricato');
