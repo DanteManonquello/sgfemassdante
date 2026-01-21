@@ -497,19 +497,40 @@ function handleSignoutClick() {
         tokenRefreshTimer = null;
     }
     
-    // Cancella token da localStorage
+    // 🔒 SECURITY: Cancella TUTTO localStorage al logout
     try {
-        localStorage.removeItem('google_access_token');
-        localStorage.removeItem('google_token_expires_at');
-        console.log('✅ Token rimosso da localStorage');
+        const keysToRemove = [
+            'google_access_token',
+            'google_token_expires_at',
+            'sgmess_calendar_events',
+            'sgmess_contacted_leads',
+            'sgmess_last_calendar_sync',
+            'sgmess_home_calendar_filter',
+            'sgmess_saved_contacts',
+            'sgmess_last_rubrica_sync',
+            'sgmess_rubrica_scan_cache',
+            'sgmess_rubrica_scan_cache_timestamp',
+            'sgmess_templates_local'
+        ];
+        
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        
+        console.log('✅ localStorage pulito al logout');
     } catch (e) {
-        console.warn('⚠️ Errore rimozione token:', e);
+        console.warn('⚠️ Errore pulizia localStorage:', e);
     }
     
     userProfileData = null;
     hideUserInfo();
     updateGoogleUIStatus(false);
     logDebug('🔓 Logout effettuato');
+    
+    // Ricarica pagina per reset completo
+    setTimeout(() => {
+        window.location.reload();
+    }, 500);
 }
 
 // ===== USER INFO =====

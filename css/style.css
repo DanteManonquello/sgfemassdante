@@ -447,7 +447,7 @@ body {
 }
 
 .time-btn {
-    padding: 8px 12px;
+    padding: 6px 10px;
     background: white;
     border: 2px solid var(--gray-200);
     border-radius: var(--radius-md);
@@ -455,7 +455,7 @@ body {
     transition: all 0.2s;
     font-weight: 500;
     color: var(--gray-600);
-    font-size: 13px;
+    font-size: 12px;
     white-space: nowrap;
 }
 
@@ -520,23 +520,29 @@ body {
 .date-input-wrapper-compact {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+}
+
+.date-picker-compact {
+    flex: 1;
+    text-align: center;
+    min-width: 0;
 }
 
 .date-nav-btn-compact {
     background: var(--whatsapp-green);
     color: white;
     border: none;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-md);
-    font-size: 24px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 20px;
     font-weight: 700;
     line-height: 1;
     cursor: pointer;
     transition: all 0.2s;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;

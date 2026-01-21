@@ -521,10 +521,17 @@ function updateLeadsList() {
 function updateLeadSelectorByDate(dateString) {
     if (!dateString) return;
     
-    const selectedDate = new Date(dateString + 'T00:00:00');
-    
     const selectLead = document.getElementById('selectLead');
     if (!selectLead) return;
+    
+    // 🔒 AUTH GUARD: Blocca senza login
+    if (!window.accessToken) {
+        selectLead.innerHTML = '<option value="">🔒 Effettua il login Google per vedere i lead</option>';
+        selectLead.disabled = true;
+        return;
+    }
+    
+    const selectedDate = new Date(dateString + 'T00:00:00');
     
     // Carica TUTTI gli eventi salvati (non filtrati)
     const allEventsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
@@ -629,6 +636,13 @@ function updateLeadSelectorByDate(dateString) {
 function updateLeadSelector(selectedDay) {
     const selectLead = document.getElementById('selectLead');
     if (!selectLead) return;
+    
+    // 🔒 AUTH GUARD: Blocca senza login
+    if (!window.accessToken) {
+        selectLead.innerHTML = '<option value="">🔒 Effettua il login Google per vedere i lead</option>';
+        selectLead.disabled = true;
+        return;
+    }
     
     // USA EVENTI FILTRATI (escludi "X" + filtra per calendario)
     const events = getFilteredEventsByCalendar();

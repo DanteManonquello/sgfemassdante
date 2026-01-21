@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.3.0 - Fix Rubrica Production-Ready
+   TESTmess v2.3.1 - Auth Guard + UI Compatta
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====

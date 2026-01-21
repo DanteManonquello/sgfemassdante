@@ -1,10 +1,11 @@
 /* ================================================================================
-   RUBRICA - TESTmess v2.3.0
+   RUBRICA - TESTmess v2.3.1
    
    Gestisce l'elenco dei contatti NON ancora salvati in rubrica Google.
    Mostra una sezione laterale con i nominativi da salvare.
    
-   CHANGELOG v2.3.0:
+   CHANGELOG v2.3.1:
+   - ✅ Auth Guard: Blocca tutti i dati senza login Google
    - ✅ Scan 12 mesi da Google Drive + Calendar API (non localStorage)
    - ✅ Rate limiting + retry logic con exponential backoff
    - ✅ Token validation prima di ogni chiamata API
@@ -77,6 +78,12 @@ async function retryWithBackoff(fn, retries = RUBRICA_CONFIG.RETRY_ATTEMPTS) {
 
 // ===== OTTIENI CONTATTI NON SALVATI (CON CACHE) =====
 async function getUnsavedContacts(forceRefresh = false) {
+    // 🔒 AUTH GUARD: Blocca senza login
+    if (!window.accessToken) {
+        console.warn('⚠️ Nessun accessToken, login richiesto');
+        return [];
+    }
+    
     // Previeni scan simultanei
     if (isScanningContacts) {
         console.warn('⚠️ Scan già in corso, attendere...');
@@ -569,6 +576,20 @@ async function saveContactToGoogle(contactData) {
 async function renderRubricaList() {
     const container = document.getElementById('rubricaList');
     if (!container) return;
+    
+    // 🔒 AUTH GUARD: Blocca senza login
+    if (!window.accessToken) {
+        container.innerHTML = `
+            <div class="info-state" style="text-align: center; padding: 40px 20px;">
+                <i class="fas fa-lock" style="font-size: 64px; color: var(--gray-400); margin-bottom: 20px;"></i>
+                <h3 style="color: var(--gray-800); margin-bottom: 12px;">Login richiesto</h3>
+                <p style="color: var(--gray-600); margin-bottom: 24px;">
+                    Effettua il login Google per vedere i contatti da salvare
+                </p>
+            </div>
+        `;
+        return;
+    }
     
     // Mostra loader
     container.innerHTML = `
