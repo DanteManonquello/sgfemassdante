@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.3.1 - Auth Guard + UI Compatta
+   TESTmess v2.4.0 - Memo del Giorno
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -419,7 +419,20 @@ async function updatePreview() {
     const NN = nome;
     const YY = assistente === 'M' ? 'il mio' : 'la mia';
     const GG = giorno;
-    const HH = orario;
+    
+    // 🆕 FORMATO ORARIO SPECIALE per Memo del Giorno
+    let HH = orario;
+    if (tipoMessaggio === 'memo_giorno') {
+        // Formato speciale: 15:00 → "15", 15:30 → "15.30"
+        if (orario.includes(':')) {
+            const [h, m] = orario.split(':');
+            HH = m === '00' ? h : `${h}.${m}`;
+        } else if (orario.includes('.')) {
+            const [h, m] = orario.split('.');
+            HH = m === '00' ? h : `${h}.${m}`;
+        }
+    }
+    
     const VV = modalita === 'LINK' 
         ? 'Ti manderò il link per la videochiamata 10 minuti prima' 
         : 'Ti videochiamerò su WhatsApp come richiesto';
@@ -624,6 +637,7 @@ async function saveToCronologia(nome, cognome, telefono, messaggio, servizio, so
     }
     
     // Aggiungi nuovo entry
+    const tipoMessaggio = document.getElementById('tipoMessaggio').value;
     const entry = {
         id: Date.now(),
         timestamp: new Date().toISOString(),
@@ -632,7 +646,8 @@ async function saveToCronologia(nome, cognome, telefono, messaggio, servizio, so
         telefono: telefono,
         messaggio: messaggio,
         servizio: servizio || '',
-        societa: societa || ''
+        societa: societa || '',
+        tipoMessaggio: tipoMessaggio || 'primo_messaggio'
     };
     
     cronologia.unshift(entry);
@@ -711,10 +726,16 @@ async function loadCronologia() {
         const dateStr = date.toLocaleDateString('it-IT');
         const timeStr = date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
         
+        // Determina badge tipo messaggio
+        const tipoLabel = entry.tipoMessaggio === 'memo_giorno' ? 'Memo' : 'Primo Msg';
+        const tipoBadge = entry.tipoMessaggio === 'memo_giorno' 
+            ? '<span style="display:inline-block;padding:2px 8px;background:#dbeafe;color:#1e40af;border-radius:12px;font-size:11px;font-weight:600;margin-left:8px;">📝 Memo</span>'
+            : '<span style="display:inline-block;padding:2px 8px;background:#dcfce7;color:#166534;border-radius:12px;font-size:11px;font-weight:600;margin-left:8px;">💬 Primo Msg</span>';
+        
         html += `
             <div class="cronologia-item">
                 <div class="cronologia-header">
-                    <strong>${entry.nome} ${entry.cognome || ''}</strong>
+                    <strong>${entry.nome} ${entry.cognome || ''}</strong>${tipoBadge}
                     <span style="font-size: 13px; color: var(--gray-500);">
                         <i class="fas fa-calendar"></i> ${dateStr} ${timeStr}
                     </span>
@@ -779,19 +800,39 @@ async function loadTemplates() {
     let templates = JSON.parse(templatesString || '[]');
     console.log('📋 Templates parsed:', templates.length);
     
-    // Se non ci sono template, crea quello di default
+    // Se non ci sono template, crea quelli di default
     if (templates.length === 0) {
         console.log('⚠️ Nessun template trovato, creo default...');
-        const defaultTemplate = {
-            id: 'primo_messaggio',
-            nome: 'Primo Messaggio',
-            categoria: 'Primo Messaggio',
-            testo: '{BB} {NN}, sono {OPERATORE} di {SERVIZIO}. Hai avuto un colloquio con {YY} assistente e mi ha riferito che abbiamo un appuntamento {GG} alle {HH}. {VV} e, nel frattempo, ti invito a leggere il file che ti è stato inviato, è molto importante. Passa {TT}'
-        };
-        templates = [defaultTemplate];
+        const defaultTemplates = [
+            {
+                id: 'primo_messaggio',
+                nome: 'Primo Messaggio',
+                categoria: 'Primo Messaggio',
+                testo: '{BB} {NN}, sono {OPERATORE} di {SERVIZIO}. Hai avuto un colloquio con {YY} assistente e mi ha riferito che abbiamo un appuntamento {GG} alle {HH}. {VV} e, nel frattempo, ti invito a leggere il file che ti è stato inviato, è molto importante. Passa {TT}'
+            },
+            {
+                id: 'memo_giorno',
+                nome: 'Memo del Giorno',
+                categoria: 'Memo',
+                testo: '{BB} {NN}, ti confermo che per le {HH} siam collegati, a dopo. Dammi riscontro, grazie'
+            }
+        ];
+        templates = defaultTemplates;
         localStorage.setItem('sgmess_templates_local', JSON.stringify(templates));
-        console.log('✅ Template default creato e salvato');
-        console.log('📝 Template testo:', defaultTemplate.testo);
+        console.log('✅ Template default creati e salvati');
+    }
+    
+    // Se esiste solo 1 template (vecchia versione), aggiungi il secondo
+    if (templates.length === 1 && templates[0].id === 'primo_messaggio') {
+        console.log('🔄 Aggiornamento: aggiungo Memo del Giorno...');
+        templates.push({
+            id: 'memo_giorno',
+            nome: 'Memo del Giorno',
+            categoria: 'Memo',
+            testo: '{BB} {NN}, ti confermo che per le {HH} siam collegati, a dopo. Dammi riscontro, grazie'
+        });
+        localStorage.setItem('sgmess_templates_local', JSON.stringify(templates));
+        console.log('✅ Memo del Giorno aggiunto');
     }
     
     // Popola dropdown

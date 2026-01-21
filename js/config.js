@@ -5,11 +5,11 @@
 // Configurazione centralizzata della versione
 const APP_CONFIG = {
     name: 'TESTmess',
-    version: '2.3.1',
-    fullName: 'v2.3.1 by Dante',
+    version: '2.4.0',
+    fullName: 'v2.4.0 by Dante',
     description: 'Stock Gain Messenger',
     author: 'Dante',
-    lastUpdate: '2026-01-21 - Auth Guard + UI Compatta: pulsanti +/- ridimensionati, blocco dati senza login'
+    lastUpdate: '2026-01-21 - Memo del Giorno: secondo tipo messaggio con formato orario speciale (15 o 15.30)'
 };
 
 // ===== GITHUB AUTO-PUSH CONFIGURATION =====
