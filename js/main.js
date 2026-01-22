@@ -884,6 +884,10 @@ window.fillFormFromDolceParanoia = function(index) {
         tipoSelect.value = 'dolce_paranoia';
     }
     
+    // 🆕 Imposta giorno (YYYY-MM-DD format)
+    const dataStr = lead.dataAppuntamento.toISOString().split('T')[0]; // YYYY-MM-DD
+    document.getElementById('giorno').value = dataStr;
+    
     // Imposta orario
     const oraStr = lead.dataAppuntamento.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
     document.getElementById('orario').value = oraStr;
