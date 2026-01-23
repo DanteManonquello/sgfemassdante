@@ -959,20 +959,28 @@ async function saveToCronologia(nome, cognome, telefono, messaggio, servizio, so
 }
 
 // ===== MARCA LEAD DA CALENDARIO COME CONTATTATO =====
-function markLeadAsContactedFromCalendar(nome, cognome, telefono) {
+async function markLeadAsContactedFromCalendar(nome, cognome, telefono) {
     const selectLead = document.getElementById('selectLead');
     if (!selectLead) return;
     
     const selectedOption = selectLead.options[selectLead.selectedIndex];
     
     if (selectedOption && selectedOption.dataset.eventId) {
-        console.log('✅ Lead marcato come contattato:', nome);
-        // Rimosso localStorage - i lead contattati sono nella cronologia Drive
+        const eventData = JSON.parse(selectedOption.dataset.eventData || '{}');
+        const eventId = selectedOption.dataset.eventId;
+        const eventDate = eventData.start || new Date().toISOString();
+        
+        // 🔥 Salva su Google Drive invece di localStorage
+        if (window.markLeadAsContacted) {
+            await window.markLeadAsContacted(eventId, nome, cognome, telefono, eventDate);
+        }
+        
+        console.log('✅ Lead marcato come contattato su Drive:', nome);
         
         // Aggiorna la lista lead dopo aver marcato come contattato
         const selectDay = document.getElementById('selectDay');
         if (selectDay && selectDay.value && window.updateLeadSelector) {
-            window.updateLeadSelector(selectDay.value);
+            await window.updateLeadSelector(selectDay.value);
         }
     }
 }

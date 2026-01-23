@@ -8,7 +8,8 @@ const DRIVE_FILES = {
     CRONOLOGIA: 'testmess_cronologia.json',
     TEMPLATES: 'testmess_templates.json',
     LAST_MESSAGE: 'testmess_last_message.json',
-    OPERATOR_NAME: 'testmess_operator_name.json'
+    OPERATOR_NAME: 'testmess_operator_name.json',
+    CONTACTED_LEADS: 'testmess_contacted_leads.json' // ✅ NUOVO: Lead contattati persistenti
 };
 
 let driveInited = false;
@@ -227,9 +228,51 @@ async function migrateLocalStorageToDrive() {
     }
 }
 
+// ===== FUNZIONI GESTIONE LEAD CONTATTATI =====
+async function getContactedLeads() {
+    if (!window.accessToken) return [];
+    
+    const data = await loadFromDrive('CONTACTED_LEADS');
+    return data || [];
+}
+
+async function saveContactedLead(leadData) {
+    if (!window.accessToken) return false;
+    
+    const leads = await getContactedLeads();
+    
+    // Evita duplicati (stesso eventId o stessa combinazione nome+data)
+    const exists = leads.some(lead => 
+        lead.eventId === leadData.eventId ||
+        (lead.nome === leadData.nome && lead.date === leadData.date)
+    );
+    
+    if (!exists) {
+        leads.push({
+            ...leadData,
+            timestamp: new Date().toISOString()
+        });
+        
+        await saveToDrive('CONTACTED_LEADS', leads);
+        console.log('✅ Lead salvato su Drive:', leadData.nome);
+    }
+    
+    return true;
+}
+
+async function clearContactedLeads() {
+    if (!window.accessToken) return false;
+    await saveToDrive('CONTACTED_LEADS', []);
+    console.log('🗑️ Lead contattati azzerati su Drive');
+    return true;
+}
+
 // ===== WRAPPER FUNZIONI PER COMPATIBILITÀ =====
 window.DriveStorage = {
     load: loadFromDrive,
     save: saveToDrive,
-    migrate: migrateLocalStorageToDrive
+    migrate: migrateLocalStorageToDrive,
+    getContactedLeads: getContactedLeads,
+    saveContactedLead: saveContactedLead,
+    clearContactedLeads: clearContactedLeads
 };

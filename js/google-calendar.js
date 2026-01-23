@@ -518,7 +518,7 @@ function updateLeadsList() {
 }
 
 // ===== AGGIORNA LEAD SELECTOR DA DATA PICKER =====
-function updateLeadSelectorByDate(dateString) {
+async function updateLeadSelectorByDate(dateString) {
     if (!dateString) return;
     
     const selectLead = document.getElementById('selectLead');
@@ -536,7 +536,9 @@ function updateLeadSelectorByDate(dateString) {
     // Carica TUTTI gli eventi salvati (non filtrati)
     const allEventsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
     const allEvents = JSON.parse(allEventsJSON || '[]');
-    const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+    
+    // 🔥 USA GOOGLE DRIVE invece di localStorage
+    const contactedLeads = window.DriveStorage ? await window.DriveStorage.getContactedLeads() : [];
     
     // Ottieni calendario selezionato nella home
     const homeCalendarFilter = getHomeSelectedCalendar();
@@ -553,25 +555,7 @@ function updateLeadSelectorByDate(dateString) {
         return isCorrectDate && isNotX && isSelectedCalendar;
     });
     
-    // Separa lead contattati e non contattati
-    const availableLeads = [];
-    const contactedLeadsForDay = [];
-    
-    dayEvents.forEach(event => {
-        const isContacted = contactedLeads.some(contacted => 
-            contacted.eventId === event.id || 
-            (contacted.nome === extractNameFromEvent(event) && 
-             new Date(contacted.timestamp).toDateString() === selectedDate.toDateString())
-        );
-        
-        if (isContacted) {
-            contactedLeadsForDay.push(event);
-        } else {
-            availableLeads.push(event);
-        }
-    });
-    
-    // Popola select
+    // Popola select - TUTTI I LEAD sempre visibili
     selectLead.innerHTML = '<option value="">-- Seleziona lead --</option>';
     
     if (dayEvents.length === 0) {
@@ -582,8 +566,8 @@ function updateLeadSelectorByDate(dateString) {
     
     selectLead.disabled = false;
     
-    // PRIMA: Lead NON contattati (in nero normale)
-    availableLeads.forEach((event, index) => {
+    // 🎯 TUTTI I LEAD (contattati e non) nello stesso elenco
+    dayEvents.forEach((event, index) => {
         const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
             hour: '2-digit', 
             minute: '2-digit' 
@@ -591,49 +575,48 @@ function updateLeadSelectorByDate(dateString) {
         
         const leadName = extractNameFromEvent(event);
         const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
+        
+        // Verifica se già contattato
+        const isContacted = contactedLeads.some(contacted => 
+            contacted.eventId === event.id || 
+            (contacted.nome === leadName && 
+             new Date(contacted.date).toDateString() === selectedDate.toDateString())
+        );
+        
         const option = document.createElement('option');
         option.value = index;
         option.dataset.eventId = event.id;
         option.dataset.eventData = JSON.stringify(event);
-        option.textContent = `${eventTime} - ${leadName}${calendarLabel}`;
-        selectLead.appendChild(option);
-    });
-    
-    // DIVIDER se ci sono lead contattati
-    if (contactedLeadsForDay.length > 0) {
-        const divider = document.createElement('option');
-        divider.disabled = true;
-        divider.textContent = '━━━━━ Già contattati ━━━━━';
-        divider.style.textAlign = 'center';
-        divider.style.color = '#999';
-        divider.style.fontStyle = 'italic';
-        selectLead.appendChild(divider);
-    }
-    
-    // POI: Lead CONTATTATI (in grigio con checkmark)
-    contactedLeadsForDay.forEach((event, index) => {
-        const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
+        option.dataset.isContacted = isContacted ? 'true' : 'false';
         
-        const leadName = extractNameFromEvent(event);
-        const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
-        const option = document.createElement('option');
-        option.value = availableLeads.length + index;
-        option.dataset.eventId = event.id;
-        option.dataset.eventData = JSON.stringify(event);
-        option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
-        option.style.color = '#888';
-        option.style.fontStyle = 'italic';
+        if (isContacted) {
+            // ✅ Lead GIÀ contattato - Verde con checkmark
+            option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
+            option.style.color = '#059669'; // Verde
+            option.style.fontWeight = '500';
+        } else {
+            // ⏳ Lead DA contattare - Testo normale
+            option.textContent = `⏳ ${eventTime} - ${leadName}${calendarLabel}`;
+            option.style.color = '#374151'; // Grigio scuro normale
+        }
+        
         selectLead.appendChild(option);
     });
     
-    console.log(`✅ Trovati ${availableLeads.length} lead disponibili e ${contactedLeadsForDay.length} già contattati per ${dateString}`);
+    const contactedCount = dayEvents.filter((e, i) => {
+        const leadName = extractNameFromEvent(e);
+        return contactedLeads.some(c => 
+            c.eventId === e.id || 
+            (c.nome === leadName && new Date(c.date).toDateString() === selectedDate.toDateString())
+        );
+    }).length;
+    
+    console.log(`✅ Trovati ${dayEvents.length} lead totali (${contactedCount} già contattati) per ${dateString}`);
+}
 }
 
 // ===== MANTIENI FUNZIONE ORIGINALE PER COMPATIBILITÀ =====
-function updateLeadSelector(selectedDay) {
+async function updateLeadSelector(selectedDay) {
     const selectLead = document.getElementById('selectLead');
     if (!selectLead) return;
     
@@ -646,7 +629,9 @@ function updateLeadSelector(selectedDay) {
     
     // USA EVENTI FILTRATI (escludi "X" + filtra per calendario)
     const events = getFilteredEventsByCalendar();
-    const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+    
+    // 🔥 USA GOOGLE DRIVE invece di localStorage
+    const contactedLeads = window.DriveStorage ? await window.DriveStorage.getContactedLeads() : [];
     
     // Filtra eventi per il giorno selezionato
     const dayEvents = events.filter(event => {
@@ -660,25 +645,7 @@ function updateLeadSelector(selectedDay) {
         return dateKey === selectedDay;
     });
     
-    // Separa lead contattati e non contattati
-    const availableLeads = [];
-    const contactedLeadsForDay = [];
-    
-    dayEvents.forEach(event => {
-        const isContacted = contactedLeads.some(contacted => 
-            contacted.eventId === event.id || 
-            (contacted.nome === extractNameFromEvent(event) && 
-             contacted.date === event.start)
-        );
-        
-        if (isContacted) {
-            contactedLeadsForDay.push(event);
-        } else {
-            availableLeads.push(event);
-        }
-    });
-    
-    // Popola select
+    // Popola select - TUTTI I LEAD sempre visibili
     selectLead.innerHTML = '<option value="">-- Seleziona lead --</option>';
     
     if (dayEvents.length === 0) {
@@ -689,8 +656,8 @@ function updateLeadSelector(selectedDay) {
     
     selectLead.disabled = false;
     
-    // PRIMA: Lead NON contattati
-    availableLeads.forEach((event, index) => {
+    // 🎯 TUTTI I LEAD (contattati e non) nello stesso elenco
+    dayEvents.forEach((event, index) => {
         const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
             hour: '2-digit', 
             minute: '2-digit' 
@@ -698,41 +665,30 @@ function updateLeadSelector(selectedDay) {
         
         const leadName = extractNameFromEvent(event);
         const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
+        
+        // Verifica se già contattato
+        const isContacted = contactedLeads.some(contacted => 
+            contacted.eventId === event.id || 
+            (contacted.nome === leadName && contacted.date === event.start)
+        );
+        
         const option = document.createElement('option');
         option.value = index;
         option.dataset.eventId = event.id;
         option.dataset.eventData = JSON.stringify(event);
-        option.textContent = `${eventTime} - ${leadName}${calendarLabel}`;
-        selectLead.appendChild(option);
-    });
-    
-    // DIVIDER se ci sono lead contattati
-    if (contactedLeadsForDay.length > 0) {
-        const divider = document.createElement('option');
-        divider.disabled = true;
-        divider.textContent = '━━━━━ Già contattati ━━━━━';
-        divider.style.textAlign = 'center';
-        divider.style.color = '#999';
-        divider.style.fontStyle = 'italic';
-        selectLead.appendChild(divider);
-    }
-    
-    // POI: Lead CONTATTATI (in grigio con checkmark)
-    contactedLeadsForDay.forEach((event, index) => {
-        const eventTime = new Date(event.start).toLocaleTimeString('it-IT', { 
-            hour: '2-digit', 
-            minute: '2-digit' 
-        });
+        option.dataset.isContacted = isContacted ? 'true' : 'false';
         
-        const leadName = extractNameFromEvent(event);
-        const calendarLabel = event.calendarName ? ` (${event.calendarName})` : '';
-        const option = document.createElement('option');
-        option.value = availableLeads.length + index;
-        option.dataset.eventId = event.id;
-        option.dataset.eventData = JSON.stringify(event);
-        option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
-        option.style.color = '#888';
-        option.style.fontStyle = 'italic';
+        if (isContacted) {
+            // ✅ Lead GIÀ contattato - Verde con checkmark
+            option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
+            option.style.color = '#059669'; // Verde
+            option.style.fontWeight = '500';
+        } else {
+            // ⏳ Lead DA contattare - Testo normale
+            option.textContent = `⏳ ${eventTime} - ${leadName}${calendarLabel}`;
+            option.style.color = '#374151'; // Grigio scuro normale
+        }
+        
         selectLead.appendChild(option);
     });
 }
@@ -940,31 +896,36 @@ function detectGenderFromName(name) {
 }
 
 // ===== MARCA LEAD COME CONTATTATO =====
-function markLeadAsContacted(eventId, nome, cognome, telefono) {
-    const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) {
+    if (!window.DriveStorage || !window.accessToken) {
+        console.warn('⚠️ Impossibile salvare lead: non loggato');
+        return;
+    }
     
     const contactedEntry = {
         eventId: eventId,
         nome: nome,
-        cognome: cognome,
-        telefono: telefono,
+        cognome: cognome || '',
+        telefono: telefono || '',
+        date: eventDate,
         timestamp: new Date().toISOString()
     };
     
-    contactedLeads.push(contactedEntry);
-    localStorage.setItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS, JSON.stringify(contactedLeads));
-    
-    console.log('✅ Lead marcato come contattato:', nome);
+    await window.DriveStorage.saveContactedLead(contactedEntry);
+    console.log('✅ Lead marcato come contattato su Drive:', nome);
 }
 
 // ===== VISUALIZZA CALENDARIO =====
-function displayCalendarView() {
+async function displayCalendarView() {
     const calendarView = document.getElementById('calendarView');
     if (!calendarView) return;
     
     // USA EVENTI FILTRATI (escludi "X" + filtra per calendario)
     const events = getFilteredEventsByCalendar();
-    const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+    
+    // 🔥 USA GOOGLE DRIVE invece di localStorage
+    const contactedLeads = window.DriveStorage ? await window.DriveStorage.getContactedLeads() : [];
+    
     const selectedCalendars = getSelectedCalendars();
     
     // Filtra eventi "X" e calendari selezionati
@@ -1154,5 +1115,6 @@ window.setTodayDate = setTodayDate;
 window.updateLeadsList = updateLeadsList;
 window.getFilteredEventsByCalendar = getFilteredEventsByCalendar;
 window.renderCalendarCheckboxes = renderCalendarCheckboxes;
+window.markLeadAsContacted = markLeadAsContacted; // 🔥 NUOVO: espone funzione globalmente
 
-console.log('✅ Google Calendar module v2.2.38 caricato - Dropdown filtro calendario nella Home');
+console.log('✅ Google Calendar module v2.5.4 caricato - Cronologia Persistente Google Drive');
