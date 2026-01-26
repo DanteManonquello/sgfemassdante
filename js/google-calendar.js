@@ -630,7 +630,6 @@ async function updateLeadSelectorByDate(dateString) {
     
     console.log(`✅ Trovati ${dayEvents.length} lead totali (${contactedCount} già contattati) per ${dateString}`);
 }
-}
 
 // ===== MANTIENI FUNZIONE ORIGINALE PER COMPATIBILITÀ =====
 async function updateLeadSelector(selectedDay) {
