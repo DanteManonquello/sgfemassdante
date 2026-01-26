@@ -510,10 +510,10 @@ function updateDaySelector() {
 }
 
 // ===== AGGIORNA LISTA LEAD (ALIAS) =====
-function updateLeadsList() {
+async function updateLeadsList() {
     const selectDay = document.getElementById('selectDay');
     if (selectDay && selectDay.value) {
-        updateLeadSelectorByDate(selectDay.value);
+        await updateLeadSelectorByDate(selectDay.value);
     }
 }
 
@@ -531,14 +531,31 @@ async function updateLeadSelectorByDate(dateString) {
         return;
     }
     
+    // ⏳ LOADING STATE
+    selectLead.innerHTML = '<option value="">⏳ Caricamento lead...</option>';
+    selectLead.disabled = true;
+    
     const selectedDate = new Date(dateString + 'T00:00:00');
     
     // Carica TUTTI gli eventi salvati (non filtrati)
     const allEventsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
     const allEvents = JSON.parse(allEventsJSON || '[]');
     
-    // 🔥 USA GOOGLE DRIVE invece di localStorage
-    const contactedLeads = window.DriveStorage ? await window.DriveStorage.getContactedLeads() : [];
+    // 🔥 CARICA LEAD CONTATTATI con fallback robusto
+    let contactedLeads = [];
+    try {
+        if (window.DriveStorage && window.accessToken) {
+            contactedLeads = await window.DriveStorage.getContactedLeads();
+            console.log('✅ Lead contattati caricati da Drive:', contactedLeads.length);
+        } else {
+            // Fallback localStorage
+            contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+            console.log('⚠️ Lead contattati da localStorage (fallback):', contactedLeads.length);
+        }
+    } catch (error) {
+        console.warn('⚠️ Errore caricamento lead contattati, uso localStorage:', error);
+        contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+    }
     
     // Ottieni calendario selezionato nella home
     const homeCalendarFilter = getHomeSelectedCalendar();
@@ -627,11 +644,28 @@ async function updateLeadSelector(selectedDay) {
         return;
     }
     
+    // ⏳ LOADING STATE
+    selectLead.innerHTML = '<option value="">⏳ Caricamento lead...</option>';
+    selectLead.disabled = true;
+    
     // USA EVENTI FILTRATI (escludi "X" + filtra per calendario)
     const events = getFilteredEventsByCalendar();
     
-    // 🔥 USA GOOGLE DRIVE invece di localStorage
-    const contactedLeads = window.DriveStorage ? await window.DriveStorage.getContactedLeads() : [];
+    // 🔥 CARICA LEAD CONTATTATI con fallback robusto
+    let contactedLeads = [];
+    try {
+        if (window.DriveStorage && window.accessToken) {
+            contactedLeads = await window.DriveStorage.getContactedLeads();
+            console.log('✅ Lead contattati caricati da Drive:', contactedLeads.length);
+        } else {
+            // Fallback localStorage
+            contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+            console.log('⚠️ Lead contattati da localStorage (fallback):', contactedLeads.length);
+        }
+    } catch (error) {
+        console.warn('⚠️ Errore caricamento lead contattati, uso localStorage:', error);
+        contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+    }
     
     // Filtra eventi per il giorno selezionato
     const dayEvents = events.filter(event => {
@@ -897,11 +931,6 @@ function detectGenderFromName(name) {
 
 // ===== MARCA LEAD COME CONTATTATO =====
 async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) {
-    if (!window.DriveStorage || !window.accessToken) {
-        console.warn('⚠️ Impossibile salvare lead: non loggato');
-        return;
-    }
-    
     const contactedEntry = {
         eventId: eventId,
         nome: nome,
@@ -911,8 +940,41 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
         timestamp: new Date().toISOString()
     };
     
-    await window.DriveStorage.saveContactedLead(contactedEntry);
-    console.log('✅ Lead marcato come contattato su Drive:', nome);
+    // 🔥 SALVA SU DRIVE con fallback localStorage
+    try {
+        if (window.DriveStorage && window.accessToken) {
+            await window.DriveStorage.saveContactedLead(contactedEntry);
+            console.log('✅ Lead marcato come contattato su Drive:', nome);
+        } else {
+            // Fallback localStorage
+            const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+            
+            // Evita duplicati
+            const exists = contactedLeads.some(lead => 
+                lead.eventId === eventId || (lead.nome === nome && lead.date === eventDate)
+            );
+            
+            if (!exists) {
+                contactedLeads.push(contactedEntry);
+                localStorage.setItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS, JSON.stringify(contactedLeads));
+                console.log('⚠️ Lead marcato in localStorage (fallback):', nome);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Errore salvataggio lead contattato:', error);
+        
+        // Fallback localStorage in caso di errore Drive
+        const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+        const exists = contactedLeads.some(lead => 
+            lead.eventId === eventId || (lead.nome === nome && lead.date === eventDate)
+        );
+        
+        if (!exists) {
+            contactedLeads.push(contactedEntry);
+            localStorage.setItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS, JSON.stringify(contactedLeads));
+            console.log('⚠️ Lead salvato in localStorage dopo errore Drive:', nome);
+        }
+    }
 }
 
 // ===== VISUALIZZA CALENDARIO =====
@@ -923,8 +985,18 @@ async function displayCalendarView() {
     // USA EVENTI FILTRATI (escludi "X" + filtra per calendario)
     const events = getFilteredEventsByCalendar();
     
-    // 🔥 USA GOOGLE DRIVE invece di localStorage
-    const contactedLeads = window.DriveStorage ? await window.DriveStorage.getContactedLeads() : [];
+    // 🔥 CARICA LEAD CONTATTATI con fallback robusto
+    let contactedLeads = [];
+    try {
+        if (window.DriveStorage && window.accessToken) {
+            contactedLeads = await window.DriveStorage.getContactedLeads();
+        } else {
+            contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+        }
+    } catch (error) {
+        console.warn('⚠️ Errore caricamento lead contattati per calendario:', error);
+        contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+    }
     
     const selectedCalendars = getSelectedCalendars();
     
@@ -1043,10 +1115,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Bottone refresh lead (ricarica lead senza sincronizzare calendario)
     const refreshLeadsBtn = document.getElementById('refreshLeadsBtn');
     if (refreshLeadsBtn) {
-        refreshLeadsBtn.addEventListener('click', () => {
+        refreshLeadsBtn.addEventListener('click', async () => {
             const selectDay = document.getElementById('selectDay');
             if (selectDay && selectDay.value) {
-                updateLeadSelectorByDate(selectDay.value);
+                await updateLeadSelectorByDate(selectDay.value);
                 showNotification('Lista lead aggiornata!', 'success');
             } else {
                 updateDaySelector();
@@ -1058,10 +1130,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cambio giorno (date picker)
     const selectDay = document.getElementById('selectDay');
     if (selectDay) {
-        selectDay.addEventListener('change', function() {
+        selectDay.addEventListener('change', async function() {
             const selectedDate = this.value; // Format: YYYY-MM-DD
             if (selectedDate) {
-                updateLeadSelectorByDate(selectedDate);
+                await updateLeadSelectorByDate(selectedDate);
             } else {
                 const selectLead = document.getElementById('selectLead');
                 selectLead.innerHTML = '<option value="">-- Seleziona una data --</option>';
@@ -1073,7 +1145,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cambio calendario nella home
     const selectCalendarFilter = document.getElementById('selectCalendarFilter');
     if (selectCalendarFilter) {
-        selectCalendarFilter.addEventListener('change', function() {
+        selectCalendarFilter.addEventListener('change', async function() {
             const calendarId = this.value;
             
             // Salva selezione in localStorage
@@ -1082,7 +1154,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Ricarica lead con nuovo filtro
             const selectDay = document.getElementById('selectDay');
             if (selectDay && selectDay.value) {
-                updateLeadSelectorByDate(selectDay.value);
+                await updateLeadSelectorByDate(selectDay.value);
                 
                 const calendarName = this.options[this.selectedIndex].textContent;
                 showNotification(`📅 Filtro applicato: ${calendarName}`, 'success');
@@ -1117,4 +1189,4 @@ window.getFilteredEventsByCalendar = getFilteredEventsByCalendar;
 window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted; // 🔥 NUOVO: espone funzione globalmente
 
-console.log('✅ Google Calendar module v2.5.4 caricato - Cronologia Persistente Google Drive');
+console.log('✅ Google Calendar module v2.5.5 caricato - Fix async/await + fallback localStorage');

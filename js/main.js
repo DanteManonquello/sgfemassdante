@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.0 inizializzato');
+    console.log('🚀 TESTmess v2.5.5 inizializzato - Fix calendario');
     
     setupSidebar();
     setupNavigation();
