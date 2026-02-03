@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.5 inizializzato - Fix calendario');
+    console.log('🚀 TESTmess v2.5.7 inizializzato - Fix calendario + rubrica');
     
     setupSidebar();
     setupNavigation();
@@ -58,6 +58,16 @@ document.addEventListener('DOMContentLoaded', async function() {
     await updatePreview();
     await loadLastMessageIndicator();
     await initDefaultDay();
+    
+    // Imposta data corrente nel date picker calendario
+    if (window.setTodayDate) {
+        window.setTodayDate();
+    }
+    
+    // Carica eventi e calendari salvati da cache (v2.5.7)
+    if (window.loadSavedEvents) {
+        window.loadSavedEvents();
+    }
     
     // Inizializza nuovi moduli v2.2.27
     if (window.initRubrica) {
@@ -1073,10 +1083,10 @@ async function loadLastMessageIndicator() {
 // ===== GIORNO DEFAULT (+2 GIORNI) =====
 async function initDefaultDay() {
     const oggi = new Date();
-    oggi.setDate(oggi.getDate() + 2);
+    // Fix v2.5.7: Imposta OGGI invece di +2 giorni
     const giorniSettimana = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
-    const giornoTraDueGiorni = giorniSettimana[oggi.getDay()];
-    document.getElementById('giorno').value = giornoTraDueGiorni;
+    const giornoOggi = giorniSettimana[oggi.getDay()];
+    document.getElementById('giorno').value = giornoOggi;
     await updatePreview();
 }
 

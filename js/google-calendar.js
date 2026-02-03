@@ -39,7 +39,8 @@ const STORAGE_KEYS_CALENDAR = {
     CONTACTED_LEADS: 'sgmess_contacted_leads', // Lead a cui abbiamo già mandato messaggi
     LOADED_DAYS_BACK: 'sgmess_loaded_days_back', // Quanti giorni indietro abbiamo caricato
     SELECTED_CALENDARS: 'sgmess_selected_calendars', // Calendari selezionati per il filtro (sezione calendario)
-    HOME_CALENDAR_FILTER: 'sgmess_home_calendar_filter' // Calendario selezionato nella home
+    HOME_CALENDAR_FILTER: 'sgmess_home_calendar_filter', // Calendario selezionato nella home
+    AVAILABLE_CALENDARS: 'sgmess_available_calendars' // Lista calendari disponibili (v2.5.7)
 };
 
 let calendarSyncInterval = null;
@@ -170,6 +171,9 @@ async function syncCalendarEvents(silent = false, loadMore = false) {
         
         // Salva lista calendari disponibili globalmente
         availableCalendars = targetCalendars;
+        
+        // Salva calendari in localStorage per uso futuro (v2.5.7)
+        localStorage.setItem(STORAGE_KEYS_CALENDAR.AVAILABLE_CALENDARS, JSON.stringify(targetCalendars));
         
         // Popola dropdown home con calendari
         populateHomeCalendarDropdown(targetCalendars);
@@ -487,6 +491,19 @@ function loadSavedEvents() {
         console.log(`📅 Caricati ${events.length} eventi dal cache`);
         updateDaySelector();
     }
+    
+    // v2.5.7: Carica anche lista calendari dal cache
+    const calendarsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.AVAILABLE_CALENDARS);
+    if (calendarsJSON) {
+        try {
+            const calendars = JSON.parse(calendarsJSON);
+            availableCalendars = calendars;
+            populateHomeCalendarDropdown(calendars);
+            console.log(`📅 Caricati ${calendars.length} calendari dal cache`);
+        } catch (e) {
+            console.warn('⚠️ Errore caricamento calendari da cache:', e);
+        }
+    }
 }
 
 // ===== IMPOSTA DATA CORRENTE NEL PICKER =====
@@ -629,7 +646,6 @@ async function updateLeadSelectorByDate(dateString) {
     }).length;
     
     console.log(`✅ Trovati ${dayEvents.length} lead totali (${contactedCount} già contattati) per ${dateString}`);
-}
 }
 
 // ===== MANTIENI FUNZIONE ORIGINALE PER COMPATIBILITÀ =====
@@ -1187,6 +1203,7 @@ window.setTodayDate = setTodayDate;
 window.updateLeadsList = updateLeadsList;
 window.getFilteredEventsByCalendar = getFilteredEventsByCalendar;
 window.renderCalendarCheckboxes = renderCalendarCheckboxes;
-window.markLeadAsContacted = markLeadAsContacted; // 🔥 NUOVO: espone funzione globalmente
+window.markLeadAsContacted = markLeadAsContacted;
+window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 
-console.log('✅ Google Calendar module v2.5.5 caricato - Fix async/await + fallback localStorage');
+console.log('✅ Google Calendar module v2.5.7 caricato - Fix dropdown calendari + data oggi');
