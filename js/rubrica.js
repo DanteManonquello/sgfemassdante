@@ -327,7 +327,6 @@ function extractContactFromEvent(event) {
     
     // 🔴 FIX v2.5.10: Rimuovi description/note dal nome (es: "Nome: Note" → "Nome")
     nameText = nameText.split(':')[0].trim(); // Prendi solo la parte prima di ":"
-    nameText = nameText.split('-')[0].trim(); // Prendi solo la parte prima di "-" (se presente)
     nameText = nameText.trim();
     
     // 2. Split nome e cognome usando database nomi italiani
