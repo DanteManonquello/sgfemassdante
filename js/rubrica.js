@@ -297,6 +297,16 @@ async function getUnsavedContacts(forceRefresh = false) {
     }
 }
 
+// ===== HELPER: CAPITALIZZA NOME =====
+function capitalizeNome(text) {
+    if (!text) return '';
+    // Capitalizza ogni parola (Mario Rossi, De Luca, etc)
+    return text.toLowerCase().split(' ').map(word => {
+        if (word.length === 0) return word;
+        return word.charAt(0).toUpperCase() + word.slice(1);
+    }).join(' ');
+}
+
 // ===== ESTRAI CONTATTO DA EVENTO CALENDARIO =====
 function extractContactFromEvent(event) {
     if (!event || !event.summary) return null;
@@ -314,6 +324,10 @@ function extractContactFromEvent(event) {
     // 1. Estrai nome dal summary (rimuovi orario se presente)
     let nameText = event.summary.replace(/^\d{1,2}:\d{2}\s*-\s*/, ''); // Rimuovi "15:30 - "
     nameText = nameText.replace(/\s*\([^)]*\)\s*$/, ''); // Rimuovi "(Stock Gain)" finale
+    
+    // 🔴 FIX v2.5.10: Rimuovi description/note dal nome (es: "Nome: Note" → "Nome")
+    nameText = nameText.split(':')[0].trim(); // Prendi solo la parte prima di ":"
+    nameText = nameText.split('-')[0].trim(); // Prendi solo la parte prima di "-" (se presente)
     nameText = nameText.trim();
     
     // 2. Split nome e cognome usando database nomi italiani
@@ -370,8 +384,8 @@ function extractContactFromEvent(event) {
     // Ritorna solo se abbiamo almeno nome e telefono
     if (nome && telefono) {
         return {
-            nome,
-            cognome,
+            nome: capitalizeNome(nome),
+            cognome: capitalizeNome(cognome),
             telefono,
             servizio,
             societa
@@ -604,8 +618,8 @@ async function saveContactToGoogle(contactData) {
         // Aggiungi società come organizzazione se presente
         if (contactData.societa) {
             contact.organizations = [{
-                name: contactData.societa,
-                title: contactData.servizio || ''
+                name: contactData.societa
+                // NON aggiungere title (qualifica) - non serve
             }];
         }
         
