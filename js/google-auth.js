@@ -56,9 +56,10 @@ const GOOGLE_API_KEY = 'AIzaSyDm2z0X0d6a73Uhe9wZpFLkZqnVY3EAJuQ';
 const SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/contacts',
-    'https://www.googleapis.com/auth/calendar.readonly',
-    'https://www.googleapis.com/auth/drive.appdata'
+    'https://www.googleapis.com/auth/contacts',           // Lettura/scrittura contatti Google
+    'https://www.googleapis.com/auth/calendar',           // Lettura/scrittura calendario (non più readonly)
+    'https://www.googleapis.com/auth/drive.file',         // Accesso file Drive creati dall'app
+    'https://www.googleapis.com/auth/spreadsheets'        // Lettura/scrittura Google Sheets
 ].join(' ');
 
 let tokenClient;

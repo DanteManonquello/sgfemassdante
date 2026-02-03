@@ -555,7 +555,8 @@ async function syncSavedContactsFromGoogle() {
                 setTimeout(() => window.handleSignoutClick(), 1500);
             }
         } else if (error.status === 403) {
-            showNotification('❌ Permessi insufficienti per accedere ai contatti', 'error');
+            showNotification('❌ ERRORE 403: Abilita People API su Google Cloud Console', 'error');
+            console.error('🔴 ISTRUZIONI: https://console.cloud.google.com/apis/library/people.googleapis.com → ABILITA');
         } else if (error.status === 429) {
             showNotification('⏳ Troppi tentativi, riprova tra qualche minuto', 'error');
         } else {
@@ -666,7 +667,16 @@ async function saveContactToGoogle(contactData) {
                 setTimeout(() => window.handleSignoutClick(), 1500);
             }
         } else if (error.status === 403) {
-            showNotification('❌ Permessi insufficienti per salvare contatti', 'error');
+            showNotification('❌ ERRORE 403: Devi abilitare le API su Google Cloud Console', 'error');
+            console.error('🔴 ISTRUZIONI PER RISOLVERE 403:');
+            console.error('1️⃣ Vai su: https://console.cloud.google.com/apis/library/people.googleapis.com');
+            console.error('2️⃣ Clicca "ABILITA" sulla People API');
+            console.error('3️⃣ Vai su: https://console.cloud.google.com/apis/library/sheets.googleapis.com');
+            console.error('4️⃣ Clicca "ABILITA" sulla Sheets API');
+            console.error('5️⃣ Vai su: https://console.cloud.google.com/apis/library/drive.googleapis.com');
+            console.error('6️⃣ Clicca "ABILITA" sulla Drive API');
+            console.error('7️⃣ Disconnetti e riconnetti Google su TESTmess');
+            console.error('✅ Dopo questi passaggi, il salvataggio funzionerà!');
         } else if (error.status === 409) {
             showNotification('ℹ️ Contatto già esistente in rubrica', 'info');
             // Marca comunque come salvato nel cache locale
