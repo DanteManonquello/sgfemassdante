@@ -1,0 +1,45 @@
+==========================================================================
+  ISTRUZIONI CONFIGURAZIONE GOOGLE OAUTH - TESTmess v2.2.12
+==========================================================================
+
+⚠️ IMPORTANTE: DEVI CONFIGURARE IL CLIENT ID UNA VOLTA PER TUTTE
+
+Il tuo Client ID: 432043907250-blb72vqc0nqm8rccoknfe29p4j5lbubr
+
+PASSAGGI (2 MINUTI):
+====================
+
+1. VAI SU GOOGLE CONSOLE:
+   https://console.cloud.google.com/apis/credentials
+
+2. TROVA IL TUO CLIENT ID:
+   - Cerca: 432043907250-blb72vqc0nqm8rccoknfe29p4j5lbubr
+   - Clicca per modificare
+
+3. AGGIUNGI URI JAVASCRIPT AUTORIZZATI:
+   - Clicca "+ AGGIUNGI URI"
+   - Incolla: https://3000-i6t533w0smt7aiwcu6a9m-cbeee0f9.sandbox.novita.ai
+   - (Copia ESATTO URL sandbox dal browser)
+
+4. AGGIUNGI URI DI REINDIRIZZAMENTO:
+   - Clicca "+ AGGIUNGI URI" nella sezione redirect
+   - Incolla STESSO URL: https://3000-i6t533w0smt7aiwcu6a9m-cbeee0f9.sandbox.novita.ai
+
+5. SALVA:
+   - Clicca "SALVA" in basso
+   - Aspetta 30 secondi per propagazione
+
+6. TESTA:
+   - Ricarica app (CTRL+F5)
+   - Clicca "Connetti Google"
+   - Dovrebbe funzionare!
+
+==========================================================================
+
+NOTA: Ogni volta che usi un NUOVO URL sandbox, devi ripetere passaggi 3-5
+con il NUOVO URL.
+
+ALTERNATIVA WILDCARD (se supportato):
+- Aggiungi: https://*.sandbox.novita.ai (potrebbe non funzionare)
+
+==========================================================================
