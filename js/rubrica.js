@@ -1,8 +1,14 @@
 /* ================================================================================
-   RUBRICA - TESTmess v2.5.6
+   RUBRICA - TESTmess v2.5.8
    
    Gestisce l'elenco dei contatti NON ancora salvati in rubrica Google.
    Mostra una sezione laterale con i nominativi da salvare.
+   
+   CHANGELOG v2.5.8:
+   - 🐛 FIX CRITICO: mostraNotifica → showNotification (era undefined)
+   - 🐛 FIX CRITICO: Export showNotification in main.js
+   - ✅ Auto-logout forzato su errore 401 (token scaduto)
+   - ✅ Messaggio notifica ora funziona correttamente
    
    CHANGELOG v2.5.6:
    - 🐛 FIX CRITICO: Corretto syncSavedContactsFromGoogle() - ora usa API corretta
@@ -125,8 +131,8 @@ async function getUnsavedContacts(forceRefresh = false) {
             } catch (e) {
                 if (e.message === 'TOKEN_EXPIRED') {
                     console.error('❌ Token scaduto, rifare login');
-                    if (window.mostraNotifica) {
-                        mostraNotifica('⚠️ Sessione scaduta, rifare login Google', 'error');
+                    if (window.showNotification) {
+                        showNotification('⚠️ Sessione scaduta, rifare login Google', 'error');
                     }
                     return [];
                 }
@@ -204,8 +210,8 @@ async function getUnsavedContacts(forceRefresh = false) {
             } catch (e) {
                 if (e.message === 'TOKEN_EXPIRED') {
                     console.error('❌ Token scaduto durante scan calendario');
-                    if (window.mostraNotifica) {
-                        mostraNotifica('⚠️ Sessione scaduta, rifare login Google', 'error');
+                    if (window.showNotification) {
+                        showNotification('⚠️ Sessione scaduta, rifare login Google', 'error');
                     }
                     return [];
                 }
@@ -469,7 +475,7 @@ async function unmarkContactAsSaved(phone) {
 // ===== SINCRONIZZA CON GOOGLE CONTACTS (API CORRETTA) =====
 async function syncSavedContactsFromGoogle() {
     if (!window.accessToken) {
-        mostraNotifica('Connetti Google per sincronizzare la rubrica', 'error');
+        showNotification('Connetti Google per sincronizzare la rubrica', 'error');
         return;
     }
     
@@ -482,7 +488,7 @@ async function syncSavedContactsFromGoogle() {
     
     try {
         checkTokenValidity();
-        mostraNotifica('🔄 Sincronizzazione rubrica Google in corso...', 'info');
+        showNotification('🔄 Sincronizzazione rubrica Google in corso...', 'info');
         console.log('📇 Sincronizzazione rubrica Google...');
         
         // ✅ CORRETTO: Usa gapi.client.request con URL diretto
@@ -527,7 +533,7 @@ async function syncSavedContactsFromGoogle() {
         localStorage.removeItem(STORAGE_KEYS_RUBRICA.SCAN_CACHE_TIMESTAMP);
         
         console.log(`💾 ${Object.keys(savedContacts).length} contatti sincronizzati`);
-        mostraNotifica(`✅ Rubrica sincronizzata: ${Object.keys(savedContacts).length} contatti`, 'success');
+        showNotification(`✅ Rubrica sincronizzata: ${Object.keys(savedContacts).length} contatti`, 'success');
         
         // Aggiorna UI
         await renderRubricaList();
@@ -537,15 +543,23 @@ async function syncSavedContactsFromGoogle() {
         
         // Error handling specifico
         if (error.message === 'TOKEN_EXPIRED') {
-            mostraNotifica('⚠️ Sessione scaduta, rifare login Google', 'error');
+            showNotification('⚠️ Sessione scaduta, rifare login Google', 'error');
+            // Forza logout
+            if (window.handleSignoutClick) {
+                setTimeout(() => window.handleSignoutClick(), 1500);
+            }
         } else if (error.status === 401) {
-            mostraNotifica('❌ Autenticazione scaduta, rifare login', 'error');
+            showNotification('❌ Token scaduto - Rifare login', 'error');
+            // Forza logout
+            if (window.handleSignoutClick) {
+                setTimeout(() => window.handleSignoutClick(), 1500);
+            }
         } else if (error.status === 403) {
-            mostraNotifica('❌ Permessi insufficienti per accedere ai contatti', 'error');
+            showNotification('❌ Permessi insufficienti per accedere ai contatti', 'error');
         } else if (error.status === 429) {
-            mostraNotifica('⏳ Troppi tentativi, riprova tra qualche minuto', 'error');
+            showNotification('⏳ Troppi tentativi, riprova tra qualche minuto', 'error');
         } else {
-            mostraNotifica('❌ Errore sincronizzazione rubrica Google', 'error');
+            showNotification('❌ Errore sincronizzazione rubrica Google', 'error');
         }
     } finally {
         // Re-abilita pulsante
@@ -559,7 +573,7 @@ async function syncSavedContactsFromGoogle() {
 // ===== SALVA CONTATTO IN GOOGLE CONTACTS (CORRETTO) =====
 async function saveContactToGoogle(contactData) {
     if (!window.accessToken) {
-        mostraNotifica('Connetti Google per salvare in rubrica', 'error');
+        showNotification('Connetti Google per salvare in rubrica', 'error');
         return false;
     }
     
@@ -570,7 +584,7 @@ async function saveContactToGoogle(contactData) {
         // Normalizza e formatta telefono con prefisso +
         const formattedPhone = formatPhoneForGoogle(contactData.telefono);
         if (!formattedPhone) {
-            mostraNotifica('❌ Numero di telefono non valido', 'error');
+            showNotification('❌ Numero di telefono non valido', 'error');
             return false;
         }
         
@@ -628,7 +642,7 @@ async function saveContactToGoogle(contactData) {
         localStorage.removeItem(STORAGE_KEYS_RUBRICA.SCAN_CACHE);
         localStorage.removeItem(STORAGE_KEYS_RUBRICA.SCAN_CACHE_TIMESTAMP);
         
-        mostraNotifica(`✅ ${contactData.nome} salvato in rubrica Google`, 'success');
+        showNotification(`✅ ${contactData.nome} salvato in rubrica Google`, 'success');
         
         // Aggiorna UI
         await renderRubricaList();
@@ -640,20 +654,28 @@ async function saveContactToGoogle(contactData) {
         
         // Error handling specifico
         if (error.message === 'TOKEN_EXPIRED') {
-            mostraNotifica('⚠️ Sessione scaduta, rifare login Google', 'error');
+            showNotification('⚠️ Sessione scaduta, rifare login Google', 'error');
+            // Forza logout
+            if (window.handleSignoutClick) {
+                setTimeout(() => window.handleSignoutClick(), 1500);
+            }
         } else if (error.status === 401) {
-            mostraNotifica('❌ Autenticazione scaduta, rifare login', 'error');
+            showNotification('❌ Token scaduto - Rifare login', 'error');
+            // Forza logout
+            if (window.handleSignoutClick) {
+                setTimeout(() => window.handleSignoutClick(), 1500);
+            }
         } else if (error.status === 403) {
-            mostraNotifica('❌ Permessi insufficienti per salvare contatti', 'error');
+            showNotification('❌ Permessi insufficienti per salvare contatti', 'error');
         } else if (error.status === 409) {
-            mostraNotifica('ℹ️ Contatto già esistente in rubrica', 'info');
+            showNotification('ℹ️ Contatto già esistente in rubrica', 'info');
             // Marca comunque come salvato nel cache locale
             await markContactAsAlreadySaved(contactData.telefono);
             return true; // Consideriamo successo
         } else if (error.status === 429) {
-            mostraNotifica('⏳ Troppi tentativi, riprova tra qualche minuto', 'error');
+            showNotification('⏳ Troppi tentativi, riprova tra qualche minuto', 'error');
         } else {
-            mostraNotifica('❌ Errore salvataggio in rubrica Google', 'error');
+            showNotification('❌ Errore salvataggio in rubrica Google', 'error');
         }
         return false;
     }
@@ -873,7 +895,7 @@ async function renderRubricaList() {
             this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             
             await markContactAsAlreadySaved(this.dataset.phone);
-            mostraNotifica('✅ Contatto marcato come già salvato', 'success');
+            showNotification('✅ Contatto marcato come già salvato', 'success');
             
             // UI viene aggiornata da renderRubricaList()
         });

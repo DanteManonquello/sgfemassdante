@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.7 inizializzato - Fix calendario + rubrica');
+    console.log('🚀 TESTmess v2.5.8 inizializzato - Fix rubrica showNotification');
     
     setupSidebar();
     setupNavigation();
@@ -1208,4 +1208,7 @@ async function loadMessaggiList() {
     container.innerHTML = html;
 }
 
-console.log('✅ Main.js v2.2.40 caricato');
+// ===== EXPORT FUNZIONI GLOBALI =====
+window.showNotification = showNotification;
+
+console.log('✅ Main.js v2.5.8 caricato');
