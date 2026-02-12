@@ -626,12 +626,13 @@ async function updateLeadSelectorByDate(dateString) {
         if (isContacted) {
             // ✅ Lead GIÀ contattato - Verde con checkmark
             option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
-            option.style.color = '#059669'; // Verde
-            option.style.fontWeight = '500';
+            option.style.color = '#059669'; // Verde scuro
+            option.style.fontWeight = '600';
         } else {
-            // ⏳ Lead DA contattare - Testo normale
-            option.textContent = `⏳ ${eventTime} - ${leadName}${calendarLabel}`;
-            option.style.color = '#374151'; // Grigio scuro normale
+            // ❌ Lead NON contattato - Rosso con X
+            option.textContent = `❌ ${eventTime} - ${leadName}${calendarLabel}`;
+            option.style.color = '#DC2626'; // Rosso
+            option.style.fontWeight = '400';
         }
         
         selectLead.appendChild(option);
@@ -731,12 +732,13 @@ async function updateLeadSelector(selectedDay) {
         if (isContacted) {
             // ✅ Lead GIÀ contattato - Verde con checkmark
             option.textContent = `✅ ${eventTime} - ${leadName}${calendarLabel}`;
-            option.style.color = '#059669'; // Verde
-            option.style.fontWeight = '500';
+            option.style.color = '#059669'; // Verde scuro
+            option.style.fontWeight = '600';
         } else {
-            // ⏳ Lead DA contattare - Testo normale
-            option.textContent = `⏳ ${eventTime} - ${leadName}${calendarLabel}`;
-            option.style.color = '#374151'; // Grigio scuro normale
+            // ❌ Lead NON contattato - Rosso con X
+            option.textContent = `❌ ${eventTime} - ${leadName}${calendarLabel}`;
+            option.style.color = '#DC2626'; // Rosso
+            option.style.fontWeight = '400';
         }
         
         selectLead.appendChild(option);
@@ -1154,15 +1156,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const selectLead = document.getElementById('selectLead');
                 selectLead.innerHTML = '<option value="">-- Seleziona una data --</option>';
                 selectLead.disabled = true;
-            }
-        });
-        
-        // 🔴 FIX v2.5.12: Aggiungi listener click per ricaricare lead anche con stessa data
-        selectDay.addEventListener('click', async function() {
-            const selectedDate = this.value;
-            if (selectedDate) {
-                console.log('📅 Click su date picker - Ricarico lead per:', selectedDate);
-                await updateLeadSelectorByDate(selectedDate);
             }
         });
     }
