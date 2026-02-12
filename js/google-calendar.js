@@ -1156,6 +1156,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 selectLead.disabled = true;
             }
         });
+        
+        // 🔴 FIX v2.5.12: Aggiungi listener click per ricaricare lead anche con stessa data
+        selectDay.addEventListener('click', async function() {
+            const selectedDate = this.value;
+            if (selectedDate) {
+                console.log('📅 Click su date picker - Ricarico lead per:', selectedDate);
+                await updateLeadSelectorByDate(selectedDate);
+            }
+        });
     }
     
     // Cambio calendario nella home

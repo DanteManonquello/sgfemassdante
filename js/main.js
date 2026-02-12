@@ -49,30 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.9 inizializzato - Fix scope OAuth completo');
-    
-    // 🔄 VERSION CHECK: Force logout se versione < 2.5.9 (scope OAuth cambiati)
-    const currentVersion = '2.5.9';
-    const savedVersion = localStorage.getItem('sgmess_app_version');
-    
-    if (!savedVersion || savedVersion < currentVersion) {
-        console.warn('⚠️ Versione cambiata da', savedVersion, 'a', currentVersion);
-        console.warn('🔄 Scope OAuth aggiornati - Forzato logout per re-consent');
-        
-        // Clear token vecchio
-        localStorage.removeItem('sgmess_access_token');
-        localStorage.removeItem('sgmess_token_expiry');
-        localStorage.removeItem('sgmess_operator_name');
-        localStorage.removeItem('sgmess_operator_photo');
-        
-        // Salva nuova versione
-        localStorage.setItem('sgmess_app_version', currentVersion);
-        
-        // Mostra notifica
-        if (window.showNotification) {
-            showNotification('⚠️ App aggiornata! Riconnetti Google per nuovi permessi', 'info');
-        }
-    }
+    console.log('🚀 TESTmess v2.5.12 inizializzato - Fix logout automatico + riseleziona data');
     
     setupSidebar();
     setupNavigation();
