@@ -916,20 +916,30 @@ async function saveToCronologia(nome, cognome, telefono, messaggio, servizio, so
     // SOLO DRIVE - Nessun localStorage
     let cronologia = [];
     
-    // Carica da Drive
+    // 🔥 FIX v2.5.14: Carica da Drive O localStorage (backup)
     if (window.DriveStorage && window.accessToken) {
         try {
             const driveData = await window.DriveStorage.load(STORAGE_KEYS.CRONOLOGIA);
             if (driveData) {
                 cronologia = driveData;
+                console.log('📂 Caricati', cronologia.length, 'messaggi da Drive');
             }
         } catch (error) {
-            console.error('❌ Errore caricamento Drive:', error);
+            console.error('❌ Drive fallito, uso localStorage:', error);
+            const localData = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
+            if (localData) {
+                cronologia = JSON.parse(localData);
+                console.log('📂 Fallback localStorage:', cronologia.length, 'messaggi');
+            }
         }
     } else {
-        console.warn('⚠️ Devi fare login Google per salvare la cronologia');
-        mostraNotifica('Fai login Google per salvare i messaggi', 'error');
-        return;
+        // BACKUP: carica da localStorage se non loggato
+        const localData = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
+        if (localData) {
+            cronologia = JSON.parse(localData);
+            console.log('📂 Caricati', cronologia.length, 'messaggi da localStorage (offline)');
+        }
+        console.warn('⚠️ Non loggato Google: cronologia salvata SOLO localmente');
     }
     
     // Aggiungi nuovo entry
@@ -953,15 +963,22 @@ async function saveToCronologia(nome, cognome, telefono, messaggio, servizio, so
         cronologia = cronologia.slice(0, 1000);
     }
     
-    // Salva SOLO su Drive
+    // 🔥 FIX v2.5.14: Salva su Drive E localStorage (backup)
+    // 1. Salva SEMPRE su localStorage (backup locale)
+    localStorage.setItem(STORAGE_KEYS.CRONOLOGIA, JSON.stringify(cronologia));
+    console.log('💾 Salvato localStorage backup:', cronologia.length, 'messaggi');
+    
+    // 2. Prova a salvare su Drive (se loggato)
     if (window.DriveStorage && window.accessToken) {
         try {
             await window.DriveStorage.save(STORAGE_KEYS.CRONOLOGIA, cronologia);
             console.log('✅ Cronologia salvata su Drive:', cronologia.length, 'messaggi');
         } catch (error) {
-            console.error('❌ Errore salvataggio Drive:', error);
-            mostraNotifica('Errore salvataggio cronologia', 'error');
+            console.error('❌ Drive fallito (403?), dati comunque su localStorage:', error);
+            mostraNotifica('⚠️ Messaggio salvato localmente (Drive non disponibile)', 'warning');
         }
+    } else {
+        console.log('💾 Salvato SOLO localStorage (non loggato Google)');
     }
     
     // Marca lead come contattato

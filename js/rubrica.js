@@ -118,7 +118,7 @@ async function getUnsavedContacts(forceRefresh = false) {
     isScanningContacts = true;
     
     try {
-        // 1. Carica cronologia messaggi DA GOOGLE DRIVE
+        // 1. Carica cronologia messaggi DA GOOGLE DRIVE (con fallback localStorage)
         let cronologia = [];
         if (window.DriveStorage && window.accessToken) {
             try {
@@ -143,6 +143,13 @@ async function getUnsavedContacts(forceRefresh = false) {
                     cronologia = JSON.parse(localCronologia);
                     console.log(`📂 Fallback localStorage: ${cronologia.length} messaggi`);
                 }
+            }
+        } else {
+            // 🔥 FIX v2.5.14: Se non loggato, usa localStorage comunque
+            const localCronologia = localStorage.getItem(STORAGE_KEYS.CRONOLOGIA);
+            if (localCronologia) {
+                cronologia = JSON.parse(localCronologia);
+                console.log(`📂 Caricati ${cronologia.length} messaggi da localStorage (offline)`);
             }
         }
         
