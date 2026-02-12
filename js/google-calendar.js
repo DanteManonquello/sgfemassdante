@@ -574,19 +574,16 @@ async function updateLeadSelectorByDate(dateString) {
         contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
     }
     
-    // Ottieni calendario selezionato nella home
-    const homeCalendarFilter = getHomeSelectedCalendar();
+    // 🔥 FIX v2.5.16: NON filtrare per calendario - mostra SEMPRE tutti i lead del giorno
+    // Il filtro calendario si applica solo alla vista calendario, NON al dropdown lead
     
-    // Filtra eventi per la data selezionata + escludi "X" + filtra per calendario home
+    // Filtra eventi per la data selezionata + escludi "X"
     const dayEvents = allEvents.filter(event => {
         const eventDate = new Date(event.start);
         const isCorrectDate = eventDate.toDateString() === selectedDate.toDateString();
         const isNotX = !shouldSkipEvent(event);
         
-        // Filtra per calendario home (se non è "all")
-        const isSelectedCalendar = homeCalendarFilter === 'all' || event.calendarId === homeCalendarFilter;
-        
-        return isCorrectDate && isNotX && isSelectedCalendar;
+        return isCorrectDate && isNotX;
     });
     
     // Popola select - TUTTI I LEAD sempre visibili
