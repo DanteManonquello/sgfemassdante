@@ -558,6 +558,11 @@ async function updateLeadSelectorByDate(dateString) {
     const allEventsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
     const allEvents = JSON.parse(allEventsJSON || '[]');
     
+    console.log(`📊 Eventi totali in localStorage: ${allEvents.length}`);
+    if (allEvents.length === 0) {
+        console.warn('⚠️ NESSUN EVENTO nel localStorage! Sincronizzazione necessaria.');
+    }
+    
     // 🔥 CARICA LEAD CONTATTATI con fallback robusto
     let contactedLeads = [];
     try {
@@ -589,10 +594,22 @@ async function updateLeadSelectorByDate(dateString) {
         return isCorrectDate && isNotX && isSelectedCalendar;
     });
     
+    console.log(`📅 Filtro applicato per ${dateString}:`);
+    console.log(`   - Eventi dopo filtro data: ${allEvents.filter(e => new Date(e.start).toDateString() === selectedDate.toDateString()).length}`);
+    console.log(`   - Eventi dopo esclusione "X": ${allEvents.filter(e => !shouldSkipEvent(e)).length}`);
+    console.log(`   - Calendario selezionato: ${homeCalendarFilter}`);
+    console.log(`   - Eventi finali per questo giorno: ${dayEvents.length}`);
+    
     // Popola select - TUTTI I LEAD sempre visibili
     selectLead.innerHTML = '<option value="">-- Seleziona lead --</option>';
     
     if (dayEvents.length === 0) {
+        console.warn(`⚠️ NESSUN EVENTO trovato per ${dateString}!`);
+        console.warn(`   Possibili cause:`);
+        console.warn(`   1. Nessun evento in questa data`);
+        console.warn(`   2. Tutti gli eventi hanno titolo "X" (esclusi)`);
+        console.warn(`   3. Filtro calendario esclude gli eventi`);
+        console.warn(`   4. Eventi non sincronizzati dal Google Calendar`);
         selectLead.innerHTML = '<option value="">-- Nessun appuntamento per questo giorno --</option>';
         selectLead.disabled = true;
         return;
@@ -1209,4 +1226,4 @@ window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 
-console.log('✅ Google Calendar module v2.5.7 caricato - Fix dropdown calendari + data oggi');
+console.log('✅ Google Calendar module v2.5.18 caricato - Debug dropdown + logging esteso');
