@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.4.0 - Memo del Giorno
+   TESTmess v2.5.16 - FIX DROPDOWN LEAD PERSISTENTE + LOGIN GOOGLE OTTIMIZZATO
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.12 inizializzato - Fix logout automatico + riseleziona data');
+    console.log('🚀 TESTmess v2.5.16 inizializzato - Fix dropdown lead persistente + Login Google ottimizzato');
     
     setupSidebar();
     setupNavigation();
@@ -622,12 +622,23 @@ async function checkAndSaveContact(nome, cognome, telefono, societa) {
 
 // ===== RESET FORM =====
 async function resetForm() {
+    // 🔥 SALVA DATA SELEZIONATA PRIMA DEL RESET (v2.5.16)
+    const selectDay = document.getElementById('selectDay');
+    const selectedDate = selectDay ? selectDay.value : null;
+    
     document.getElementById('nome').value = '';
     document.getElementById('cognome').value = '';
     document.getElementById('telefono').value = '';
     document.getElementById('orario').value = '15';
     
     await updatePreview();
+    
+    // 🔥 RIPOPOLA DROPDOWN LEAD SE C'ERA UNA DATA SELEZIONATA (v2.5.16)
+    if (selectedDate && window.updateLeadSelectorByDate) {
+        console.log('🔄 Ricarico dropdown lead per data:', selectedDate);
+        await window.updateLeadSelectorByDate(selectedDate);
+    }
+    
     document.getElementById('nome').focus();
 }
 

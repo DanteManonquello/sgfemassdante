@@ -958,40 +958,41 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
         timestamp: new Date().toISOString()
     };
     
-    // 🔥 SALVA SU DRIVE con fallback localStorage
-    try {
-        if (window.DriveStorage && window.accessToken) {
-            await window.DriveStorage.saveContactedLead(contactedEntry);
-            console.log('✅ Lead marcato come contattato su Drive:', nome);
-        } else {
-            // Fallback localStorage
-            const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
-            
-            // Evita duplicati
-            const exists = contactedLeads.some(lead => 
-                lead.eventId === eventId || (lead.nome === nome && lead.date === eventDate)
-            );
-            
-            if (!exists) {
-                contactedLeads.push(contactedEntry);
-                localStorage.setItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS, JSON.stringify(contactedLeads));
-                console.log('⚠️ Lead marcato in localStorage (fallback):', nome);
+    // 🔥 FIX v2.5.15: Salva PRIMA su localStorage (backup), POI prova Drive
+    // 1. Carica array esistente
+    let contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
+    
+    // 2. Evita duplicati
+    const exists = contactedLeads.some(lead => 
+        lead.eventId === eventId || (lead.nome === nome && lead.date === eventDate)
+    );
+    
+    if (!exists) {
+        // 3. SALVA SEMPRE su localStorage (backup primario)
+        contactedLeads.push(contactedEntry);
+        localStorage.setItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS, JSON.stringify(contactedLeads));
+        console.log('💾 Lead salvato in localStorage (backup primario):', nome);
+        
+        // 4. PROVA a salvare anche su Drive (sync cloud)
+        try {
+            if (window.DriveStorage && window.accessToken) {
+                await window.DriveStorage.saveContactedLead(contactedEntry);
+                console.log('✅ Lead sincronizzato su Drive:', nome);
+            } else {
+                console.log('⚠️ Non loggato Google: dati SOLO su localStorage');
             }
+        } catch (error) {
+            console.warn('⚠️ Drive fallito (403?), dati comunque salvati su localStorage:', error.message);
         }
-    } catch (error) {
-        console.error('❌ Errore salvataggio lead contattato:', error);
-        
-        // Fallback localStorage in caso di errore Drive
-        const contactedLeads = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS) || '[]');
-        const exists = contactedLeads.some(lead => 
-            lead.eventId === eventId || (lead.nome === nome && lead.date === eventDate)
-        );
-        
-        if (!exists) {
-            contactedLeads.push(contactedEntry);
-            localStorage.setItem(STORAGE_KEYS_CALENDAR.CONTACTED_LEADS, JSON.stringify(contactedLeads));
-            console.log('⚠️ Lead salvato in localStorage dopo errore Drive:', nome);
-        }
+    } else {
+        console.log('ℹ️ Lead già marcato come contattato:', nome);
+    }
+    
+    // 5. 🔥 FIX v2.5.15: Refresh UI DOPO salvataggio
+    const selectDay = document.getElementById('selectDay');
+    if (selectDay && selectDay.value) {
+        await updateLeadSelectorByDate(selectDay.value);
+        console.log('🔄 UI aggiornata dopo salvataggio lead');
     }
 }
 

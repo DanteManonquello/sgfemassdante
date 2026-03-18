@@ -1,5 +1,12 @@
 /* ================================================================================
-   GOOGLE AUTH - VERSIONE 2.2.40
+   GOOGLE AUTH - VERSIONE 2.5.16
+   
+   CHANGELOG 2.5.16:
+   - ✅ Auto-refresh ottimizzato: refresh ogni 30 minuti invece di 55 (più sicuro)
+   - ✅ Retry intelligente: 3 tentativi con backoff esponenziale se refresh fallisce
+   - ✅ Keep-alive timer: chiamata API ogni 25 minuti per mantenere sessione attiva
+   - ✅ Notifica automatica dopo 3 tentativi falliti per avvisare utente
+   - ✅ Cleanup completo: stop keep-alive timer al logout
    
    CHANGELOG 2.2.40:
    - ✅ Push GitHub completato e configurato per future modifiche
@@ -363,8 +370,11 @@ async function handleAuthResponse(resp) {
         console.warn('⚠️ Impossibile salvare token in localStorage:', e);
     }
     
-    // ===== AUTO-REFRESH TIMER =====
+    // ===== AUTO-REFRESH TIMER (v2.5.16 - ottimizzato) =====
     setupTokenAutoRefresh(expiresIn);
+    
+    // 🔥 v2.5.16: Keep-alive API call ogni 25 minuti per mantenere sessione
+    setupKeepAliveTimer();
     
     console.log('✅ Access token ricevuto');
     logDebug('✅ Access token ricevuto', { tokenLength: accessToken.length });
@@ -396,6 +406,8 @@ async function handleAuthResponse(resp) {
 
 // ===== AUTO-REFRESH TOKEN TIMER =====
 let tokenRefreshTimer = null;
+let tokenRefreshAttempts = 0;
+const MAX_REFRESH_ATTEMPTS = 3;
 
 function setupTokenAutoRefresh(expiresIn) {
     // Cancella timer precedente
@@ -403,8 +415,10 @@ function setupTokenAutoRefresh(expiresIn) {
         clearTimeout(tokenRefreshTimer);
     }
     
-    // Calcola quando fare refresh (5 minuti prima della scadenza)
-    const refreshInMs = (expiresIn - 300) * 1000; // 5 minuti prima
+    // 🔥 v2.5.16: Refresh più frequente (30 minuti invece di 55)
+    // Calcola quando fare refresh (30 minuti prima della scadenza, o a metà se scade prima di 30min)
+    const refreshInSeconds = Math.max(expiresIn - 1800, expiresIn / 2); // 30 minuti prima o metà tempo
+    const refreshInMs = refreshInSeconds * 1000;
     
     if (refreshInMs > 0) {
         tokenRefreshTimer = setTimeout(async () => {
@@ -415,15 +429,77 @@ function setupTokenAutoRefresh(expiresIn) {
                     // Richiesta silente (nessun popup)
                     tokenClient.requestAccessToken({ prompt: '' });
                     console.log('✅ Token refresh richiesto');
+                    tokenRefreshAttempts = 0; // Reset contatore tentativi
                 } catch (error) {
                     console.warn('⚠️ Errore auto-refresh token:', error);
-                    // Se fallisce, l'utente dovrà rifare login manualmente
+                    tokenRefreshAttempts++;
+                    
+                    // 🔥 v2.5.16: Retry intelligente con backoff esponenziale
+                    if (tokenRefreshAttempts < MAX_REFRESH_ATTEMPTS) {
+                        const retryDelay = Math.min(60000 * Math.pow(2, tokenRefreshAttempts), 300000); // Max 5 min
+                        console.log(`🔄 Retry #${tokenRefreshAttempts} tra ${retryDelay / 1000}s...`);
+                        
+                        setTimeout(() => {
+                            if (tokenClient) {
+                                try {
+                                    tokenClient.requestAccessToken({ prompt: '' });
+                                } catch (retryError) {
+                                    console.error('❌ Retry fallito:', retryError);
+                                }
+                            }
+                        }, retryDelay);
+                    } else {
+                        // Dopo 3 tentativi, mostra notifica
+                        console.error('❌ Auto-refresh fallito dopo 3 tentativi');
+                        if (window.mostraNotifica) {
+                            mostraNotifica('⚠️ Sessione Google scaduta. Riconnettiti per continuare.', 'warning');
+                        }
+                    }
                 }
             }
         }, refreshInMs);
         
-        console.log(`⏰ Auto-refresh impostato tra ${Math.floor(refreshInMs / 60000)} minuti`);
+        console.log(`⏰ Auto-refresh impostato tra ${Math.floor(refreshInMs / 60000)} minuti (v2.5.16 - ottimizzato)`);
     }
+}
+
+// ===== KEEP-ALIVE TIMER (v2.5.16) =====
+let keepAliveTimer = null;
+
+function setupKeepAliveTimer() {
+    // Cancella timer precedente
+    if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+    }
+    
+    // Keep-alive ogni 25 minuti (chiamata API silenziosa per mantenere sessione)
+    keepAliveTimer = setInterval(async () => {
+        if (!accessToken) {
+            console.log('⏭️ Keep-alive saltato: nessun token');
+            return;
+        }
+        
+        try {
+            // Chiamata API leggera per verificare token e mantenere sessione
+            const response = await fetch('https://www.googleapis.com/oauth2/v1/userinfo?alt=json', {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            
+            if (response.ok) {
+                console.log('✅ Keep-alive: sessione attiva');
+            } else if (response.status === 401) {
+                console.warn('⚠️ Keep-alive: token scaduto, forzo refresh...');
+                // Token scaduto, forza refresh
+                if (tokenClient) {
+                    tokenClient.requestAccessToken({ prompt: '' });
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Keep-alive fallito:', error);
+        }
+    }, 1500000); // 25 minuti in millisecondi
+    
+    console.log('⏰ Keep-alive impostato (ogni 25 minuti)');
 }
 
 // ===== RIPRISTINA TOKEN DA localStorage ALL'AVVIO =====
@@ -444,6 +520,9 @@ function restoreTokenFromStorage() {
             // Setup auto-refresh
             const remainingSeconds = Math.floor((expiresAt - Date.now()) / 1000);
             setupTokenAutoRefresh(remainingSeconds);
+            
+            // 🔥 v2.5.16: Setup keep-alive anche al ripristino
+            setupKeepAliveTimer();
             
             // Carica user info e aggiorna UI
             (async () => {
@@ -496,6 +575,12 @@ function handleSignoutClick() {
     if (tokenRefreshTimer) {
         clearTimeout(tokenRefreshTimer);
         tokenRefreshTimer = null;
+    }
+    
+    // 🔥 v2.5.16: Cancella anche keep-alive timer
+    if (keepAliveTimer) {
+        clearInterval(keepAliveTimer);
+        keepAliveTimer = null;
     }
     
     // 🔒 SECURITY: Cancella TUTTO localStorage al logout
@@ -977,4 +1062,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.2.25 - OAuth funzionante');
+console.log('✅ Google Auth v2.5.16 - OAuth funzionante + Keep-alive ottimizzato');
