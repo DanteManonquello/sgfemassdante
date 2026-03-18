@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.20 inizializzato - FIX SERVIZIO DA CALENDARIO (SG/FE auto-detect)');
+    console.log('🚀 TESTmess v2.5.21 inizializzato - FIX SERVIZIO RUBRICA (SG/FE unified)');
     
     setupSidebar();
     setupNavigation();

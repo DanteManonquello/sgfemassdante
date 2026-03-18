@@ -51,7 +51,7 @@ let isScanningContacts = false;
 
 // ===== INIZIALIZZAZIONE =====
 function initRubrica() {
-    console.log('📒 Rubrica module v2.3.0 initialized');
+    console.log('📒 Rubrica module v2.5.21 initialized - Servizio unified con google-calendar.js');
     
     // Event listener per pulsante sincronizza rubrica
     const syncBtn = document.getElementById('syncRubricaBtn');
@@ -363,14 +363,21 @@ function extractContactFromEvent(event) {
         }
     }
     
-    // 4. Determina società dal calendarName o servizio
-    if (event.calendarName) {
-        if (event.calendarName.includes('Stock Gain') || event.calendarName.includes('SG')) {
-            societa = 'SG - Lead';
-            if (!servizio) servizio = 'Stock Gain';
-        } else if (event.calendarName.includes('Finanza Efficace') || event.calendarName.includes('FE')) {
-            societa = 'FE - Lead';
-            if (!servizio) servizio = 'Finanza Efficace';
+    // 4. Determina società e servizio usando la funzione condivisa
+    if (window.extractServiceFromEvent) {
+        const serviceData = window.extractServiceFromEvent(event);
+        servizio = serviceData.servizio;
+        societa = serviceData.societa;
+    } else {
+        // Fallback se funzione non disponibile (non dovrebbe mai succedere)
+        if (event.calendarName) {
+            if (event.calendarName.includes('Stock Gain') || event.calendarName.includes('SG')) {
+                societa = 'SG - Lead';
+                if (!servizio) servizio = 'Stock Gain';
+            } else if (event.calendarName.includes('Finanza Efficace') || event.calendarName.includes('FE')) {
+                societa = 'FE - Lead';
+                if (!servizio) servizio = 'Finanza Efficace';
+            }
         }
     }
     
