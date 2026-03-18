@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.16 - FIX DROPDOWN LEAD PERSISTENTE + LOGIN GOOGLE OTTIMIZZATO
+   TESTmess v2.5.17 - FIX OAUTH + EXPORT FUNZIONE
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.16 inizializzato - Fix dropdown lead persistente + Login Google ottimizzato');
+    console.log('🚀 TESTmess v2.5.17 inizializzato - Fix dropdown lead persistente + Login Google ottimizzato');
     
     setupSidebar();
     setupNavigation();

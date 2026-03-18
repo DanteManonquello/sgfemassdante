@@ -1,5 +1,10 @@
 /* ================================================================================
-   GOOGLE AUTH - VERSIONE 2.5.16
+   GOOGLE AUTH - VERSIONE 2.5.17
+   
+   CHANGELOG 2.5.17:
+   - ✅ FIX: Rimosso export duplicato saveContactToGoogle (causava errore undefined)
+   - ✅ La funzione è esportata correttamente da rubrica.js
+   - ✅ Risolto conflitto ordine caricamento script
    
    CHANGELOG 2.5.16:
    - ✅ Auto-refresh ottimizzato: refresh ogni 30 minuti invece di 55 (più sicuro)
@@ -903,7 +908,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ===== ESPORTA =====
 window.gapiLoaded = gapiLoaded;
 window.gisLoaded = gisLoaded;
-window.saveContactToGoogle = saveContactToGoogle;
+// 🔥 v2.5.17: Rimosso export saveContactToGoogle (definito in rubrica.js)
 window.userProfileData = () => userProfileData;
 window.toggleDebugMode = toggleDebugMode;
 
@@ -1062,4 +1067,4 @@ function setAssistenteToggle(gender) {
 window.checkSetterGenderFromEvent = checkSetterGenderFromEvent;
 window.extractSetterFromEvent = extractSetterFromEvent;
 
-console.log('✅ Google Auth v2.5.16 - OAuth funzionante + Keep-alive ottimizzato');
+console.log('✅ Google Auth v2.5.17 - OAuth funzionante + Keep-alive ottimizzato');
