@@ -940,12 +940,18 @@ function parseNameSurname(fullName) {
 // ===== ESTRAI SERVIZIO DA EVENTO =====
 function extractServiceFromEvent(event) {
     const description = event.description || '';
+    const calendarName = event.calendarName || '';
     
-    // Cerca pattern "SERVIZIO: Stock Gain" o "Servizio: Finanza Efficace"
+    console.log('🔍 [extractServiceFromEvent] Evento:', event.summary);
+    console.log('   📅 Calendario:', calendarName);
+    console.log('   📝 Description:', description ? description.substring(0, 100) : '(vuota)');
+    
+    // PRIORITÀ 1: Cerca pattern "SERVIZIO: Stock Gain" in description
     const serviceMatch = description.match(/SERVIZIO[:\s]+(.+?)(?:\n|$)/i);
     
     if (serviceMatch) {
         const servizioText = serviceMatch[1].trim().toLowerCase();
+        console.log('   ✅ Trovato SERVIZIO in description:', servizioText);
         
         // Mapping servizio → società
         if (servizioText.includes('stock gain') || servizioText.includes('sg')) {
@@ -961,7 +967,36 @@ function extractServiceFromEvent(event) {
         }
     }
     
-    // Default: Stock Gain
+    // PRIORITÀ 2: Inferisci da nome calendario
+    const calendarLower = calendarName.toLowerCase();
+    
+    // Pattern Finanza Efficace
+    if (calendarLower.includes('fe -') || 
+        calendarLower.includes('finanza efficace') ||
+        calendarLower.includes('fe lead')) {
+        console.log('   ✅ Rilevato FE da calendario:', calendarName);
+        return {
+            servizio: 'Finanza Efficace',
+            societa: 'FE - Lead'
+        };
+    }
+    
+    // Pattern Stock Gain (default per calendari SG)
+    if (calendarLower.includes('sg -') || 
+        calendarLower.includes('stock gain') ||
+        calendarLower.includes('sg lead') ||
+        calendarLower.includes('call consulenza') ||
+        calendarLower.includes('call interne') ||
+        calendarLower.includes('follow up')) {
+        console.log('   ✅ Rilevato SG da calendario:', calendarName);
+        return {
+            servizio: 'Stock Gain',
+            societa: 'SG - Lead'
+        };
+    }
+    
+    // Default: Stock Gain (se calendario non riconosciuto)
+    console.log('   ⚠️ Calendario non riconosciuto, default a Stock Gain');
     return {
         servizio: 'Stock Gain',
         societa: 'SG - Lead'
@@ -1242,4 +1277,4 @@ window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 
-console.log('✅ Google Calendar module v2.5.19 caricato - FIX DROPDOWN LEAD DEFINITIVO');
+console.log('✅ Google Calendar module v2.5.20 caricato - FIX SERVIZIO DA CALENDARIO');
