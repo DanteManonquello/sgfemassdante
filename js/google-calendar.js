@@ -46,6 +46,7 @@ const STORAGE_KEYS_CALENDAR = {
 let calendarSyncInterval = null;
 let isLoadingMoreEvents = false; // Flag per evitare chiamate multiple
 let availableCalendars = []; // Lista calendari disponibili
+let isFormProgrammaticUpdate = false; // v2.5.19: Flag per evitare re-trigger del listener selectDay
 
 // ===== INIT CALENDAR SYNC =====
 function initCalendarSync() {
@@ -843,6 +844,9 @@ function extractPhoneFromEvent(event) {
 
 // ===== COMPILA FORM DA EVENTO =====
 function fillFormFromEvent(event) {
+    // v2.5.19: Attiva flag per bloccare re-trigger del listener selectDay
+    isFormProgrammaticUpdate = true;
+    
     const leadName = extractNameFromEvent(event);
     const phone = extractPhoneFromEvent(event);
     
@@ -882,6 +886,12 @@ function fillFormFromEvent(event) {
     if (window.updatePreview) {
         updatePreview();
     }
+    
+    // v2.5.19: Resetta flag dopo 100ms (attende che tutti gli event listener siano processati)
+    setTimeout(() => {
+        isFormProgrammaticUpdate = false;
+        console.log('🔓 Flag isFormProgrammaticUpdate resettato');
+    }, 100);
     
     console.log('✅ Form compilato da evento:', leadName, '→', firstName, lastName, '|', servizio, '→', societa);
 }
@@ -1167,6 +1177,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectDay = document.getElementById('selectDay');
     if (selectDay) {
         selectDay.addEventListener('change', async function() {
+            // v2.5.19: SKIP se aggiornamento programmatico (fillFormFromEvent in corso)
+            if (isFormProgrammaticUpdate) {
+                console.log('⏭️ SKIP updateLeadSelectorByDate – Aggiornamento programmatico del form in corso');
+                return;
+            }
+            
             const selectedDate = this.value; // Format: YYYY-MM-DD
             if (selectedDate) {
                 await updateLeadSelectorByDate(selectedDate);
@@ -1226,4 +1242,4 @@ window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 
-console.log('✅ Google Calendar module v2.5.18 caricato - Debug dropdown + logging esteso');
+console.log('✅ Google Calendar module v2.5.19 caricato - FIX DROPDOWN LEAD DEFINITIVO');

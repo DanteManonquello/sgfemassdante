@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.17 inizializzato - Fix dropdown lead persistente + Login Google ottimizzato');
+    console.log('🚀 TESTmess v2.5.19 inizializzato - FIX DROPDOWN LEAD DEFINITIVO + Master Message + 403/404 Drive');
     
     setupSidebar();
     setupNavigation();

@@ -1,6 +1,10 @@
 /* ================================================================================
-   GOOGLE DRIVE STORAGE - v2.2.7
+   GOOGLE DRIVE STORAGE - v2.5.19
    Sostituisce localStorage con Google Drive API (AppDataFolder)
+   
+   CHANGELOG v2.5.19:
+   - ✅ GESTIONE 403/404: File non trovati su Drive creati automaticamente
+   - ✅ ERRORI SILENTI: Nessun errore console per file mancanti (prima volta)
    ================================================================================ */
 
 // ===== CONFIGURAZIONE =====
@@ -96,6 +100,11 @@ async function loadFromDrive(key) {
         
         return response.result;
     } catch (error) {
+        // v2.5.19: Gestione 403/404 - File non trovato o permessi insufficienti
+        if (error.status === 404 || error.status === 403) {
+            console.warn(`⚠️ File ${fileName} non trovato o non accessibile (${error.status}) - Verrà creato al primo salvataggio`);
+            return null; // Ritorna null invece di errore - verrà creato in saveToDrive
+        }
         console.error(`❌ Errore lettura ${fileName}:`, error);
         return null;
     }
