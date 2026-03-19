@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stock Gain Messenger - v2.5.21 by Dante</title>
-    <link rel="stylesheet" href="css/style.css?v=2.5.21">
+    <title>Stock Gain Messenger - v2.5.22 by Dante</title>
+    <link rel="stylesheet" href="css/style.css?v=2.5.22">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -516,6 +516,44 @@
                 <p style="margin-bottom: 20px; color: var(--gray-600);">
                     Questa sezione mostra i contatti della cronologia che NON sono ancora stati salvati in rubrica Google.
                 </p>
+                
+                <!-- Date Range Picker -->
+                <div class="date-range-picker" style="margin-bottom: 20px; padding: 16px; background: var(--gray-100); border-radius: 8px;">
+                    <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label for="rubricaDateStart" style="display: block; margin-bottom: 6px; font-weight: 500; color: var(--gray-700);">
+                                <i class="fas fa-calendar-alt"></i> Data Inizio
+                            </label>
+                            <input 
+                                type="date" 
+                                id="rubricaDateStart" 
+                                class="form-control"
+                                style="width: 100%;"
+                            >
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label for="rubricaDateEnd" style="display: block; margin-bottom: 6px; font-weight: 500; color: var(--gray-700);">
+                                <i class="fas fa-calendar-check"></i> Data Fine
+                            </label>
+                            <input 
+                                type="date" 
+                                id="rubricaDateEnd" 
+                                class="form-control"
+                                style="width: 100%;"
+                            >
+                        </div>
+                        <div style="flex: 0 0 auto;">
+                            <label style="display: block; margin-bottom: 6px; opacity: 0;">_</label>
+                            <button type="button" class="btn btn-secondary" id="applyDateFilterBtn">
+                                <i class="fas fa-filter"></i> Applica Filtro
+                            </button>
+                        </div>
+                    </div>
+                    <div id="dateRangeInfo" style="margin-top: 10px; font-size: 0.9em; color: var(--gray-600);">
+                        <i class="fas fa-info-circle"></i> Range: <span id="dateRangeDays">0</span> giorni
+                    </div>
+                </div>
+                
                 <button type="button" class="btn btn-primary" id="syncRubricaBtn" style="margin-bottom: 20px;">
                     <i class="fas fa-sync-alt"></i> Sincronizza Ora
                 </button>
@@ -623,16 +661,16 @@
     </button>
 
     <!-- Scripts -->
-    <script src="js/nomi-italiani.js?v=2.5.21"></script>
-    <script src="js/config.js?v=2.5.21"></script>
-    <script src="js/google-auth.js?v=2.5.21"></script>
-    <script src="js/google-drive-storage.js?v=2.5.21"></script>
-    <script src="js/google-sheets-assistenti.js?v=2.5.21"></script>
-    <script src="js/google-calendar.js?v=2.5.21"></script>
-    <script src="js/templates.js?v=2.5.21"></script>
-    <script src="js/rubrica.js?v=2.5.21"></script>
-    <script src="js/github-auto-push.js?v=2.5.21"></script>
-    <script src="js/main.js?v=2.5.21"></script>
+    <script src="js/nomi-italiani.js?v=2.5.22"></script>
+    <script src="js/config.js?v=2.5.22"></script>
+    <script src="js/google-auth.js?v=2.5.22"></script>
+    <script src="js/google-drive-storage.js?v=2.5.22"></script>
+    <script src="js/google-sheets-assistenti.js?v=2.5.22"></script>
+    <script src="js/google-calendar.js?v=2.5.22"></script>
+    <script src="js/templates.js?v=2.5.22"></script>
+    <script src="js/rubrica.js?v=2.5.22"></script>
+    <script src="js/github-auto-push.js?v=2.5.22"></script>
+    <script src="js/main.js?v=2.5.22"></script>
     
     <!-- Google API Initialization -->
     <script>

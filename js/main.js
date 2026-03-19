@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.17 - FIX OAUTH + EXPORT FUNZIONE
+   TESTmess v2.5.22 - FIX DUPLICATI +39 AGNOSTIC + DATE RANGE PICKER
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.21 inizializzato - FIX SERVIZIO RUBRICA (SG/FE unified)');
+    console.log('🚀 TESTmess v2.5.22 inizializzato - FIX DUPLICATI +39 AGNOSTIC + DATE RANGE PICKER');
     
     setupSidebar();
     setupNavigation();

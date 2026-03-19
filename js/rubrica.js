@@ -33,7 +33,9 @@ const STORAGE_KEYS_RUBRICA = {
     SAVED_CONTACTS: 'sgmess_saved_contacts', // Cache dei contatti già salvati
     LAST_RUBRICA_SYNC: 'sgmess_last_rubrica_sync',
     SCAN_CACHE: 'sgmess_rubrica_scan_cache', // Cache risultati scan
-    SCAN_CACHE_TIMESTAMP: 'sgmess_rubrica_scan_timestamp'
+    SCAN_CACHE_TIMESTAMP: 'sgmess_rubrica_scan_timestamp',
+    DATE_RANGE_START: 'sgmess_rubrica_date_start', // v2.5.22: Data inizio filtro
+    DATE_RANGE_END: 'sgmess_rubrica_date_end' // v2.5.22: Data fine filtro
 };
 
 // Config
@@ -43,7 +45,10 @@ const RUBRICA_CONFIG = {
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY_BASE: 1000, // ms
     CACHE_DURATION: 10 * 60 * 1000, // 10 minuti in ms (ridotto da 1 ora)
-    CONTACTS_PER_PAGE: 100
+    CONTACTS_PER_PAGE: 100,
+    DEFAULT_DAYS_BACK: 7, // v2.5.22: Default giorni indietro
+    DEFAULT_DAYS_FORWARD: 10, // v2.5.22: Default giorni avanti
+    MAX_DAYS_RANGE: 180 // v2.5.22: Max range selezionabile (90 + 90)
 };
 
 // Flag per prevenire doppi scan
@@ -51,7 +56,10 @@ let isScanningContacts = false;
 
 // ===== INIZIALIZZAZIONE =====
 function initRubrica() {
-    console.log('📒 Rubrica module v2.5.21 initialized - Servizio unified con google-calendar.js');
+    console.log('📒 Rubrica module v2.5.22 initialized - Date range picker + duplicati +39 agnostic');
+    
+    // Inizializza date picker con valori default
+    initDateRangePicker();
     
     // Event listener per pulsante sincronizza rubrica
     const syncBtn = document.getElementById('syncRubricaBtn');
@@ -60,6 +68,136 @@ function initRubrica() {
             await syncSavedContactsFromGoogle();
         });
     }
+    
+    // Event listener per pulsante applica filtro date
+    const applyFilterBtn = document.getElementById('applyDateFilterBtn');
+    if (applyFilterBtn) {
+        applyFilterBtn.addEventListener('click', async () => {
+            await applyDateRangeFilter();
+        });
+    }
+    
+    // Event listener per cambio date (aggiorna contatore giorni)
+    const dateStartInput = document.getElementById('rubricaDateStart');
+    const dateEndInput = document.getElementById('rubricaDateEnd');
+    
+    if (dateStartInput && dateEndInput) {
+        dateStartInput.addEventListener('change', updateDateRangeInfo);
+        dateEndInput.addEventListener('change', updateDateRangeInfo);
+    }
+}
+
+// ===== INIZIALIZZA DATE RANGE PICKER =====
+function initDateRangePicker() {
+    const dateStartInput = document.getElementById('rubricaDateStart');
+    const dateEndInput = document.getElementById('rubricaDateEnd');
+    
+    if (!dateStartInput || !dateEndInput) return;
+    
+    // Leggi date salvate o usa default
+    const savedStart = localStorage.getItem(STORAGE_KEYS_RUBRICA.DATE_RANGE_START);
+    const savedEnd = localStorage.getItem(STORAGE_KEYS_RUBRICA.DATE_RANGE_END);
+    
+    const today = new Date();
+    
+    // Data inizio: oggi - 7 giorni (default ottimale per performance)
+    const defaultStart = new Date(today);
+    defaultStart.setDate(defaultStart.getDate() - RUBRICA_CONFIG.DEFAULT_DAYS_BACK);
+    
+    // Data fine: oggi + 10 giorni
+    const defaultEnd = new Date(today);
+    defaultEnd.setDate(defaultEnd.getDate() + RUBRICA_CONFIG.DEFAULT_DAYS_FORWARD);
+    
+    // Imposta valori (usa salvati se esistono, altrimenti default)
+    dateStartInput.value = savedStart || defaultStart.toISOString().split('T')[0];
+    dateEndInput.value = savedEnd || defaultEnd.toISOString().split('T')[0];
+    
+    // Imposta limiti min/max
+    const minDate = new Date(today);
+    minDate.setDate(minDate.getDate() - 90);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + 90);
+    
+    dateStartInput.min = minDate.toISOString().split('T')[0];
+    dateStartInput.max = maxDate.toISOString().split('T')[0];
+    dateEndInput.min = minDate.toISOString().split('T')[0];
+    dateEndInput.max = maxDate.toISOString().split('T')[0];
+    
+    // Aggiorna info range
+    updateDateRangeInfo();
+    
+    console.log(`📅 Date picker inizializzato: ${dateStartInput.value} → ${dateEndInput.value}`);
+}
+
+// ===== AGGIORNA INFO RANGE GIORNI =====
+function updateDateRangeInfo() {
+    const dateStartInput = document.getElementById('rubricaDateStart');
+    const dateEndInput = document.getElementById('rubricaDateEnd');
+    const dateRangeDays = document.getElementById('dateRangeDays');
+    
+    if (!dateStartInput || !dateEndInput || !dateRangeDays) return;
+    
+    const start = new Date(dateStartInput.value);
+    const end = new Date(dateEndInput.value);
+    
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        dateRangeDays.textContent = '0';
+        return;
+    }
+    
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    dateRangeDays.textContent = diffDays;
+    
+    // Warning se range troppo grande
+    if (diffDays > RUBRICA_CONFIG.MAX_DAYS_RANGE) {
+        dateRangeDays.parentElement.style.color = 'var(--error-color)';
+        dateRangeDays.parentElement.innerHTML = `<i class="fas fa-exclamation-triangle"></i> Range troppo grande: ${diffDays} giorni (max ${RUBRICA_CONFIG.MAX_DAYS_RANGE})`;
+    } else {
+        dateRangeDays.parentElement.style.color = 'var(--gray-600)';
+        dateRangeDays.parentElement.innerHTML = `<i class="fas fa-info-circle"></i> Range: <span id="dateRangeDays">${diffDays}</span> giorni`;
+    }
+}
+
+// ===== APPLICA FILTRO DATE =====
+async function applyDateRangeFilter() {
+    const dateStartInput = document.getElementById('rubricaDateStart');
+    const dateEndInput = document.getElementById('rubricaDateEnd');
+    
+    if (!dateStartInput || !dateEndInput) return;
+    
+    const start = new Date(dateStartInput.value);
+    const end = new Date(dateEndInput.value);
+    
+    // Validazione
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        showNotification('⚠️ Seleziona date valide', 'error');
+        return;
+    }
+    
+    if (start > end) {
+        showNotification('⚠️ Data inizio deve essere prima della data fine', 'error');
+        return;
+    }
+    
+    const diffTime = Math.abs(end - start);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > RUBRICA_CONFIG.MAX_DAYS_RANGE) {
+        showNotification(`⚠️ Range troppo grande (${diffDays} giorni, max ${RUBRICA_CONFIG.MAX_DAYS_RANGE})`, 'error');
+        return;
+    }
+    
+    // Salva date in localStorage
+    localStorage.setItem(STORAGE_KEYS_RUBRICA.DATE_RANGE_START, dateStartInput.value);
+    localStorage.setItem(STORAGE_KEYS_RUBRICA.DATE_RANGE_END, dateEndInput.value);
+    
+    console.log(`✅ Filtro applicato: ${dateStartInput.value} → ${dateEndInput.value} (${diffDays} giorni)`);
+    showNotification(`✅ Filtro applicato: ${diffDays} giorni`, 'success');
+    
+    // Ricarica contatti con nuovo filtro
+    await renderRubricaList();
 }
 
 // ===== UTILITY: SLEEP =====
@@ -158,15 +296,30 @@ async function getUnsavedContacts(forceRefresh = false) {
         if (window.accessToken && window.gapi && window.gapi.client && window.gapi.client.calendar) {
             try {
                 checkTokenValidity();
-                console.log('📅 Caricamento eventi calendario ultimi 12 mesi...');
                 
-                // Range: 12 mesi nel passato fino a oggi
-                const now = new Date();
-                const twelveMonthsAgo = new Date();
-                twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+                // v2.5.22: Usa date range da localStorage o default
+                const savedStart = localStorage.getItem(STORAGE_KEYS_RUBRICA.DATE_RANGE_START);
+                const savedEnd = localStorage.getItem(STORAGE_KEYS_RUBRICA.DATE_RANGE_END);
                 
-                const timeMin = twelveMonthsAgo.toISOString();
-                const timeMax = now.toISOString();
+                let timeMin, timeMax;
+                
+                if (savedStart && savedEnd) {
+                    // Usa range salvato
+                    timeMin = new Date(savedStart).toISOString();
+                    timeMax = new Date(savedEnd + 'T23:59:59').toISOString(); // Fine giornata
+                    console.log(`📅 Caricamento eventi calendario con filtro: ${savedStart} → ${savedEnd}`);
+                } else {
+                    // Fallback: oggi - 7 giorni → oggi + 10 giorni
+                    const now = new Date();
+                    const startDate = new Date();
+                    startDate.setDate(startDate.getDate() - RUBRICA_CONFIG.DEFAULT_DAYS_BACK);
+                    const endDate = new Date();
+                    endDate.setDate(endDate.getDate() + RUBRICA_CONFIG.DEFAULT_DAYS_FORWARD);
+                    
+                    timeMin = startDate.toISOString();
+                    timeMax = endDate.toISOString();
+                    console.log(`📅 Caricamento eventi calendario (default range: -${RUBRICA_CONFIG.DEFAULT_DAYS_BACK} / +${RUBRICA_CONFIG.DEFAULT_DAYS_FORWARD} giorni)`);
+                }
                 
                 // Ottieni lista calendari con retry
                 const calendarListResponse = await retryWithBackoff(async () => {
@@ -226,12 +379,20 @@ async function getUnsavedContacts(forceRefresh = false) {
             }
         }
         
-        // 3. Carica cache contatti salvati
+        // 3. Carica cache contatti salvati E crea Map per O(1) lookup
         const savedContactsJSON = localStorage.getItem(STORAGE_KEYS_RUBRICA.SAVED_CONTACTS);
         let savedContacts = {};
+        const savedNumbersSet = new Set(); // v2.5.22: Set per confronto veloce
+        
         if (savedContactsJSON) {
             try {
                 savedContacts = JSON.parse(savedContactsJSON);
+                // Popola Set con numeri normalizzati per confronto
+                Object.keys(savedContacts).forEach(phone => {
+                    const normalized = normalizeForComparison(phone);
+                    if (normalized) savedNumbersSet.add(normalized);
+                });
+                console.log(`📞 Caricati ${savedNumbersSet.size} numeri già salvati (Set per confronto veloce)`);
             } catch (e) {
                 console.error('❌ Errore parsing saved contacts:', e);
             }
@@ -244,9 +405,13 @@ async function getUnsavedContacts(forceRefresh = false) {
             const phone = normalizePhone(entry.telefono);
             if (!phone) return; // Skip se non c'è telefono
             
+            // v2.5.22: Usa normalizeForComparison per check duplicati (+39 agnostic)
+            const phoneForComparison = normalizeForComparison(phone);
+            const isDuplicate = savedNumbersSet.has(phoneForComparison);
+            
             // Se non è già salvato E non è già nella lista
-            if (!savedContacts[phone] && !uniqueContacts[phone]) {
-                uniqueContacts[phone] = {
+            if (!isDuplicate && !uniqueContacts[phoneForComparison]) {
+                uniqueContacts[phoneForComparison] = {
                     nome: entry.nome || '',
                     cognome: entry.cognome || '',
                     telefono: entry.telefono,
@@ -267,9 +432,13 @@ async function getUnsavedContacts(forceRefresh = false) {
             const phone = normalizePhone(contactData.telefono);
             if (!phone) return; // Skip se non c'è telefono
             
+            // v2.5.22: Usa normalizeForComparison per check duplicati (+39 agnostic)
+            const phoneForComparison = normalizeForComparison(phone);
+            const isDuplicate = savedNumbersSet.has(phoneForComparison);
+            
             // Se non è già salvato E non è già nella lista
-            if (!savedContacts[phone] && !uniqueContacts[phone]) {
-                uniqueContacts[phone] = {
+            if (!isDuplicate && !uniqueContacts[phoneForComparison]) {
+                uniqueContacts[phoneForComparison] = {
                     nome: contactData.nome || '',
                     cognome: contactData.cognome || '',
                     telefono: contactData.telefono,
@@ -427,6 +596,30 @@ function normalizePhone(phone) {
     
     // Valida lunghezza finale (minimo 10 cifre)
     return cleaned.length >= 10 ? cleaned : null;
+}
+
+// ===== NORMALIZZA PER CONFRONTO DUPLICATI (v2.5.22) =====
+// Rimuove prefisso +39 in modo che +393331234567 === 3331234567
+function normalizeForComparison(phone) {
+    if (!phone) return null;
+    
+    // Rimuovi tutti i caratteri non numerici
+    let cleaned = phone.replace(/[^\d]/g, '');
+    
+    // Rimuovi prefisso 00 se presente
+    if (cleaned.startsWith('00')) {
+        cleaned = cleaned.substring(2);
+    }
+    
+    // CRITICO: Rimuovi prefisso 39 per confronto locale
+    // +393331234567 → 3331234567
+    // 393331234567 → 3331234567
+    if (cleaned.startsWith('39') && cleaned.length > 10) {
+        cleaned = cleaned.substring(2);
+    }
+    
+    // Valida lunghezza (minimo 9 cifre dopo rimozione prefisso)
+    return cleaned.length >= 9 ? cleaned : null;
 }
 
 // ===== FORMATTA TELEFONO PER GOOGLE (con +) =====
