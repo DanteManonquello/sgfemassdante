@@ -56,7 +56,7 @@ let isScanningContacts = false;
 
 // ===== INIZIALIZZAZIONE =====
 function initRubrica() {
-    console.log('📒 Rubrica module v2.5.22 initialized - Date range picker + duplicati +39 agnostic');
+    console.log('📒 Rubrica module v2.5.23 initialized - Controllo incongruenze società + aggiornamento contatti');
     
     // Inizializza date picker con valori default
     initDateRangePicker();
@@ -249,7 +249,12 @@ async function getUnsavedContacts(forceRefresh = false) {
         
         if (cachedData && (Date.now() - cacheTimestamp) < RUBRICA_CONFIG.CACHE_DURATION) {
             console.log('📦 Uso cache rubrica (valida per altri ' + Math.round((RUBRICA_CONFIG.CACHE_DURATION - (Date.now() - cacheTimestamp)) / 60000) + ' min)');
-            return JSON.parse(cachedData);
+            const parsed = JSON.parse(cachedData);
+            // v2.5.23: Supporta vecchio formato (array) e nuovo (object con unsaved/toUpdate)
+            if (Array.isArray(parsed)) {
+                return { unsaved: parsed, toUpdate: [] }; // Vecchio formato
+            }
+            return parsed; // Nuovo formato
         }
     }
     
@@ -400,6 +405,7 @@ async function getUnsavedContacts(forceRefresh = false) {
         
         // 4. Estrai contatti unici dalla cronologia
         const uniqueContacts = {};
+        const contactsToUpdate = {}; // v2.5.23: NUOVO - contatti con incongruenze
         
         cronologia.forEach(entry => {
             const phone = normalizePhone(entry.telefono);
@@ -420,6 +426,28 @@ async function getUnsavedContacts(forceRefresh = false) {
                     timestamp: entry.timestamp || new Date().toISOString(),
                     source: 'cronologia'
                 };
+            }
+            // v2.5.23: NUOVO - Se è già salvato, verifica incongruenze società
+            else if (isDuplicate) {
+                const savedContact = savedContacts[phone] || savedContacts[phoneForComparison];
+                if (savedContact && savedContact.societa !== undefined) {
+                    const updateCheck = needsSocietaUpdate(savedContact.societa, entry.societa);
+                    if (updateCheck.needsUpdate) {
+                        contactsToUpdate[phoneForComparison] = {
+                            nome: entry.nome || savedContact.nome || '',
+                            cognome: entry.cognome || '',
+                            telefono: entry.telefono,
+                            societaSalvata: savedContact.societa || '',
+                            societaEvento: entry.societa || '',
+                            servizio: entry.servizio || '',
+                            timestamp: entry.timestamp || new Date().toISOString(),
+                            source: 'cronologia',
+                            updateReason: updateCheck.reason,
+                            updatePriority: updateCheck.priority,
+                            resourceName: savedContact.resourceName // Per update Google
+                        };
+                    }
+                }
             }
         });
         
@@ -449,24 +477,70 @@ async function getUnsavedContacts(forceRefresh = false) {
                     calendarName: event.calendarName || ''
                 };
             }
+            // v2.5.23: NUOVO - Se è già salvato, verifica incongruenze società
+            else if (isDuplicate && !contactsToUpdate[phoneForComparison]) { // Evita duplicati cronologia
+                const savedContact = savedContacts[phone] || savedContacts[phoneForComparison];
+                if (savedContact && savedContact.societa !== undefined) {
+                    const updateCheck = needsSocietaUpdate(savedContact.societa, contactData.societa);
+                    if (updateCheck.needsUpdate) {
+                        contactsToUpdate[phoneForComparison] = {
+                            nome: contactData.nome || savedContact.nome || '',
+                            cognome: contactData.cognome || '',
+                            telefono: contactData.telefono,
+                            societaSalvata: savedContact.societa || '',
+                            societaEvento: contactData.societa || '',
+                            servizio: contactData.servizio || '',
+                            timestamp: event.start || new Date().toISOString(),
+                            source: 'calendario',
+                            calendarName: event.calendarName || '',
+                            updateReason: updateCheck.reason,
+                            updatePriority: updateCheck.priority,
+                            resourceName: savedContact.resourceName // Per update Google
+                        };
+                    }
+                }
+            }
         });
         
         // 6. Converti in array e ordina per timestamp (più recenti prima)
         const unsavedArray = Object.values(uniqueContacts);
         unsavedArray.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         
-        // Salva in cache
-        localStorage.setItem(STORAGE_KEYS_RUBRICA.SCAN_CACHE, JSON.stringify(unsavedArray));
+        // v2.5.23: Ordina contatti da aggiornare per priorità
+        const toUpdateArray = Object.values(contactsToUpdate);
+        const priorityOrder = { 'ALTA': 1, 'MEDIA': 2, 'BASSA': 3 };
+        toUpdateArray.sort((a, b) => {
+            const priorityDiff = priorityOrder[a.updatePriority] - priorityOrder[b.updatePriority];
+            if (priorityDiff !== 0) return priorityDiff;
+            return new Date(b.timestamp) - new Date(a.timestamp);
+        });
+        
+        // Salva in cache (ENTRAMBE le liste)
+        const cacheData = {
+            unsaved: unsavedArray,
+            toUpdate: toUpdateArray // v2.5.23: NUOVO
+        };
+        localStorage.setItem(STORAGE_KEYS_RUBRICA.SCAN_CACHE, JSON.stringify(cacheData));
         localStorage.setItem(STORAGE_KEYS_RUBRICA.SCAN_CACHE_TIMESTAMP, Date.now().toString());
         
         console.log('═════════════════════════════════════════════════');
-        console.log(`📒 RUBRICA SCAN COMPLETO:`);
+        console.log(`📒 RUBRICA SCAN COMPLETO (v2.5.23):`);
         console.log(`   📂 Cronologia Drive: ${cronologia.length} messaggi`);
-        console.log(`   📅 Eventi Calendario: ${calendarEvents.length} eventi (12 mesi)`);
-        console.log(`   🔍 Contatti da salvare: ${unsavedArray.length}`);
+        console.log(`   📅 Eventi Calendario: ${calendarEvents.length} eventi`);
+        console.log(`   🆕 Contatti da salvare: ${unsavedArray.length}`);
+        console.log(`   ⚠️ Contatti da aggiornare: ${toUpdateArray.length}`);
+        if (toUpdateArray.length > 0) {
+            console.log(`      - Priorità ALTA: ${toUpdateArray.filter(c => c.updatePriority === 'ALTA').length}`);
+            console.log(`      - Priorità MEDIA: ${toUpdateArray.filter(c => c.updatePriority === 'MEDIA').length}`);
+            console.log(`      - Priorità BASSA: ${toUpdateArray.filter(c => c.updatePriority === 'BASSA').length}`);
+        }
         console.log('═════════════════════════════════════════════════');
         
-        return unsavedArray;
+        // v2.5.23: Restituisci ENTRAMBE le liste
+        return {
+            unsaved: unsavedArray,
+            toUpdate: toUpdateArray
+        };
         
     } finally {
         isScanningContacts = false;
@@ -631,6 +705,98 @@ function formatPhoneForGoogle(phone) {
     return normalized.startsWith('+') ? normalized : '+' + normalized;
 }
 
+// ===== VERIFICA INCONGRUENZA SOCIETÀ (v2.5.23) =====
+// Restituisce {needsUpdate: bool, reason: string, priority: string}
+function needsSocietaUpdate(savedSocieta, eventSocieta) {
+    const saved = (savedSocieta || '').trim();
+    const event = (eventSocieta || '').trim();
+    
+    // 1. Se rubrica è vuota → SERVE UPDATE
+    if (!saved || saved === '') {
+        return { 
+            needsUpdate: true, 
+            reason: 'Campo società vuoto', 
+            priority: 'MEDIA',
+            savedValue: '(vuoto)',
+            eventValue: event || '(nessuna info)'
+        };
+    }
+    
+    // 2. Formati vecchi (Stock Gain, Finanza Efficace)
+    const oldFormats = ['Stock Gain', 'Finanza Efficace', 'stock gain', 'finanza efficace', 'STOCK GAIN', 'FINANZA EFFICACE'];
+    if (oldFormats.some(old => saved.toLowerCase() === old.toLowerCase())) {
+        return { 
+            needsUpdate: true, 
+            reason: 'Formato vecchio (pre-2024)', 
+            priority: 'MEDIA',
+            savedValue: saved,
+            eventValue: event || 'SG - Lead / FE - Lead'
+        };
+    }
+    
+    // 3. Refusi comuni (senza trattino, maiuscolo sbagliato, etc)
+    const refusi = [
+        'SG Lead', 'SG lead', 'sg lead', 'sg - lead',
+        'FE Lead', 'FE lead', 'fe lead', 'fe - lead',
+        'SG-Lead', 'FE-Lead', 'Sg - Lead', 'Fe - Lead'
+    ];
+    if (refusi.some(refuso => saved === refuso)) {
+        return { 
+            needsUpdate: true, 
+            reason: 'Refuso formato (maiuscolo/trattino)', 
+            priority: 'BASSA',
+            savedValue: saved,
+            eventValue: event
+        };
+    }
+    
+    // 4. Verifica servizio diverso (SG vs FE) → PRIORITÀ ALTA
+    const savedService = saved.includes('SG') ? 'SG' : saved.includes('FE') ? 'FE' : null;
+    const eventService = event.includes('SG') ? 'SG' : event.includes('FE') ? 'FE' : null;
+    
+    if (savedService && eventService && savedService !== eventService) {
+        return { 
+            needsUpdate: true, 
+            reason: `⚠️ SERVIZIO DIVERSO: ${savedService} ≠ ${eventService}`, 
+            priority: 'ALTA',
+            savedValue: saved,
+            eventValue: event
+        };
+    }
+    
+    // 5. Società generica vs specifica
+    const genericFormats = ['SG - Lead', 'FE - Lead'];
+    const isGenericSaved = genericFormats.includes(saved);
+    const isGenericEvent = genericFormats.includes(event);
+    
+    if (isGenericSaved && !isGenericEvent && event) {
+        return { 
+            needsUpdate: true, 
+            reason: 'Disponibile versione più specifica', 
+            priority: 'BASSA',
+            savedValue: saved + ' (generico)',
+            eventValue: event + ' (specifico)'
+        };
+    }
+    
+    // 6. Formato non riconosciuto (text random)
+    const validPatterns = ['SG', 'FE', 'Stock', 'Finanza'];
+    const hasValidPattern = validPatterns.some(pattern => saved.includes(pattern));
+    
+    if (!hasValidPattern && event) {
+        return { 
+            needsUpdate: true, 
+            reason: 'Formato non riconosciuto (testo casuale)', 
+            priority: 'ALTA',
+            savedValue: saved,
+            eventValue: event
+        };
+    }
+    
+    // 7. Tutto OK
+    return { needsUpdate: false };
+}
+
 // ===== MARCA CONTATTO COME GIÀ SALVATO (SENZA SALVARE IN GOOGLE) =====
 // Questa funzione NON salva in Google, solo marca nel cache locale
 async function markContactAsAlreadySaved(phone) {
@@ -713,6 +879,7 @@ async function syncSavedContactsFromGoogle() {
         
         // ✅ CORRETTO: Usa gapi.client.request con URL diretto
         // API: https://people.googleapis.com/v1/people/me/connections
+        // v2.5.23: Aggiungi organizations per controllo società
         const response = await retryWithBackoff(async () => {
             return await gapi.client.request({
                 'path': 'https://people.googleapis.com/v1/people/me/connections',
@@ -720,7 +887,7 @@ async function syncSavedContactsFromGoogle() {
                 'params': {
                     'resourceName': 'people/me',
                     'pageSize': 1000,
-                    'personFields': 'names,phoneNumbers'
+                    'personFields': 'names,phoneNumbers,organizations' // ✅ AGGIUNTO organizations
                 }
             });
         });
@@ -728,16 +895,31 @@ async function syncSavedContactsFromGoogle() {
         const connections = response.result.connections || [];
         console.log(`✅ Trovati ${connections.length} contatti in Google`);
         
-        // Estrai numeri di telefono normalizzati
+        // Estrai numeri di telefono normalizzati + società
         const savedContacts = {};
         connections.forEach(person => {
             if (person.phoneNumbers) {
+                // Estrai società (organization)
+                let societa = '';
+                if (person.organizations && person.organizations.length > 0) {
+                    societa = person.organizations[0].name || '';
+                }
+                
+                // Estrai nome completo
+                let nomeCompleto = '';
+                if (person.names && person.names.length > 0) {
+                    nomeCompleto = person.names[0].displayName || '';
+                }
+                
                 person.phoneNumbers.forEach(phoneObj => {
                     const normalized = normalizePhone(phoneObj.value);
                     if (normalized) {
                         savedContacts[normalized] = {
                             savedAt: new Date().toISOString(),
-                            fromGoogle: true
+                            fromGoogle: true,
+                            societa: societa, // ✅ NUOVO: salva società
+                            nome: nomeCompleto, // ✅ NUOVO: salva nome
+                            resourceName: person.resourceName // ✅ NUOVO: per update
                         };
                     }
                 });
@@ -911,6 +1093,84 @@ async function saveContactToGoogle(contactData) {
     }
 }
 
+
+// ===== v2.5.23: HELPER per renderizzare contatto da aggiornare =====
+function renderContactToUpdate(contact) {
+    const priorityColors = {
+        'ALTA': 'var(--error-color)',
+        'MEDIA': 'var(--warning-color)',
+        'BASSA': 'var(--info-color)'
+    };
+    const color = priorityColors[contact.updatePriority] || 'var(--gray-600)';
+    
+    return `
+        <div class="rubrica-item" style="padding: 12px; border: 2px solid ${color}; border-radius: 8px; margin-bottom: 10px; background: white;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: var(--gray-800); margin-bottom: 6px;">
+                        <i class="fas fa-user"></i>
+                        ${contact.nome} ${contact.cognome || ''}
+                    </div>
+                    <div style="font-size: 0.9em; color: var(--gray-600); margin-bottom: 4px;">
+                        <i class="fas fa-phone"></i> ${contact.telefono}
+                    </div>
+                    <div style="font-size: 0.85em; margin-top: 8px; padding: 8px; background: #f8f9fa; border-left: 3px solid ${color}; border-radius: 4px;">
+                        <div style="font-weight: 500; color: ${color}; margin-bottom: 4px;">
+                            <i class="fas fa-exclamation-circle"></i> ${contact.updateReason}
+                        </div>
+                        <div style="display: flex; gap: 16px; margin-top: 6px;">
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.8em; color: var(--gray-500); margin-bottom: 2px;">In Rubrica:</div>
+                                <div style="font-weight: 500; color: var(--error-color);">
+                                    ❌ ${contact.societaSalvata || '(vuoto)'}
+                                </div>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-size: 0.8em; color: var(--gray-500); margin-bottom: 2px;">Nell'Evento:</div>
+                                <div style="font-weight: 500; color: var(--success-color);">
+                                    ✅ ${contact.societaEvento || '(nessuna info)'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    ${contact.source ? `
+                        <div style="font-size: 0.8em; color: var(--gray-400); margin-top: 6px;">
+                            <i class="fas fa-${contact.source === 'calendario' ? 'calendar' : 'history'}"></i> 
+                            ${contact.source === 'calendario' ? 'Da calendario' : 'Da cronologia'}
+                            ${contact.calendarName ? ` (${contact.calendarName})` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; margin-left: 12px;">
+                    <button 
+                        type="button" 
+                        class="btn btn-sm btn-success update-contact-btn"
+                        data-phone="${contact.telefono}"
+                        data-nome="${contact.nome}"
+                        data-cognome="${contact.cognome || ''}"
+                        data-societa="${contact.societaEvento || ''}"
+                        data-servizio="${contact.servizio || ''}"
+                        data-resource="${contact.resourceName || ''}"
+                        title="Aggiorna con dati corretti"
+                        style="white-space: nowrap;"
+                    >
+                        <i class="fas fa-sync"></i> Aggiorna
+                    </button>
+                    <button 
+                        type="button" 
+                        class="btn btn-sm btn-secondary ignore-update-btn"
+                        data-phone="${contact.telefono}"
+                        title="Ignora (lascia così)"
+                        style="white-space: nowrap;"
+                    >
+                        <i class="fas fa-times"></i> Ignora
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 // ===== RENDER LISTA RUBRICA =====
 async function renderRubricaList() {
     const container = document.getElementById('rubricaList');
@@ -943,11 +1203,13 @@ async function renderRubricaList() {
     const lastSync = localStorage.getItem(STORAGE_KEYS_RUBRICA.LAST_RUBRICA_SYNC);
     const hasSynced = !!lastSync;
     
-    // STEP 2: Ottieni contatti non salvati (ASYNC!)
-    const unsavedContacts = await getUnsavedContacts();
+    // STEP 2: Ottieni contatti (ASYNC!) - v2.5.23: ritorna {unsaved, toUpdate}
+    const contactsData = await getUnsavedContacts();
+    const unsavedContacts = contactsData.unsaved || [];
+    const contactsToUpdate = contactsData.toUpdate || [];
     
     // STEP 3: Verifica se hai dati
-    const hasAnyData = unsavedContacts.length > 0 || hasSynced;
+    const hasAnyData = (unsavedContacts.length > 0 || contactsToUpdate.length > 0) || hasSynced;
     
     // CASO 1: Mai sincronizzato
     if (!hasSynced) {
