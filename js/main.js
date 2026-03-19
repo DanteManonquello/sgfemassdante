@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.22 - FIX DUPLICATI +39 AGNOSTIC + DATE RANGE PICKER
+   TESTmess v2.5.23 - CONTROLLO INCONGRUENZE SOCIETÀ (WIP)
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.22 inizializzato - FIX DUPLICATI +39 AGNOSTIC + DATE RANGE PICKER');
+    console.log('🚀 TESTmess v2.5.23 inizializzato - CONTROLLO INCONGRUENZE SOCIETÀ (WIP)');
     
     setupSidebar();
     setupNavigation();
