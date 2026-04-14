@@ -893,7 +893,7 @@ function fillFormFromEvent(event) {
     }
     document.getElementById('orario').value = orarioValue;
     
-    // 🆕 v2.5.29: Mostra bottone Google Meet SEMPRE (passati, presenti, futuri)
+    // 🆕 v2.5.30: Mostra bottone Google Meet SEMPRE (passati, presenti, futuri)
     const meetLink = event.hangoutLink || 
                    (event.conferenceData && event.conferenceData.entryPoints && 
                     event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video')?.uri);
@@ -1289,7 +1289,7 @@ async function displayCalendarView() {
             const statusIcon = event.contacted ? 'fa-check-circle' : 'fa-clock';
             const statusText = event.contacted ? 'Contattato' : 'Da contattare';
             
-            // v2.5.29: Bottone Meet SEMPRE visibile (passati, presenti, futuri)
+            // v2.5.30: Bottone Meet SEMPRE visibile (passati, presenti, futuri)
             const existingMeet = event.hangoutLink || 
                 (event.conferenceData && event.conferenceData.entryPoints && 
                  event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video') 
@@ -1524,7 +1524,7 @@ async function addMeetToEvent(eventId, calendarId, btnEl) {
     }
 }
 
-// ===== v2.5.29: WRAPPER PER AGGIUNGERE MEET DAL FORM =====
+// ===== v2.5.30: WRAPPER PER AGGIUNGERE MEET DAL FORM =====
 async function addMeetToEventFromForm(eventId, calendarId) {
     const btn = document.getElementById('addMeetBtnForm');
     
@@ -1571,6 +1571,6 @@ window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
-window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.29: Wrapper per form
+window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.29 caricato - BOTTONE MEET SEMPRE VISIBILE');
+console.log('✅ Google Calendar module v2.5.30 caricato - MEET SOTTO DROPDOWN LEAD');

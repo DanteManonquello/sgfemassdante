@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.29 - BOTTONE MEET SEMPRE VISIBILE
+   TESTmess v2.5.30 - MEET SOTTO DROPDOWN LEAD
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.29 inizializzato - BOTTONE MEET SEMPRE VISIBILE');
+    console.log('🚀 TESTmess v2.5.30 inizializzato - MEET SOTTO DROPDOWN LEAD');
     
     setupSidebar();
     setupNavigation();

@@ -56,7 +56,7 @@ let isScanningContacts = false;
 
 // ===== INIZIALIZZAZIONE =====
 function initRubrica() {
-    console.log('📒 Rubrica module v2.5.29 initialized - Controllo incongruenze società + aggiornamento contatti');
+    console.log('📒 Rubrica module v2.5.30 initialized - Controllo incongruenze società + aggiornamento contatti');
     
     // Inizializza date picker con valori default
     initDateRangePicker();
