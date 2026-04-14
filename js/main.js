@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.26 - GOOGLE MEET INTEGRATION
+   TESTmess v2.5.27 - AUTO RENAME CALENDAR EVENT
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.26 inizializzato - GOOGLE MEET INTEGRATION');
+    console.log('🚀 TESTmess v2.5.27 inizializzato - AUTO RENAME CALENDAR EVENT');
     
     setupSidebar();
     setupNavigation();

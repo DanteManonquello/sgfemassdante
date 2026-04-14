@@ -1086,8 +1086,9 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
         }
         
         // 5. 🆕 v2.5.24: Aggiungi link WhatsApp nella descrizione evento
+        // 🆕 v2.5.27: Rinomina evento con solo Nome Cognome
         try {
-            await addWhatsAppLinkToEvent(eventId, telefono);
+            await addWhatsAppLinkToEvent(eventId, telefono, nome, cognome);
         } catch (error) {
             console.warn('⚠️ Non riesco ad aggiornare evento con link WhatsApp:', error.message);
         }
@@ -1104,7 +1105,8 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
 }
 
 // ===== v2.5.24: AGGIUNGI LINK WHATSAPP NELLA DESCRIZIONE EVENTO =====
-async function addWhatsAppLinkToEvent(eventId, telefono) {
+// ===== v2.5.27: RINOMINA EVENTO CON SOLO NOME COGNOME =====
+async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome) {
     if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
         console.warn('⚠️ Google Calendar API non inizializzata');
         return;
@@ -1135,29 +1137,45 @@ async function addWhatsAppLinkToEvent(eventId, telefono) {
         const currentDescription = event.result.description || '';
         
         // 2. Controlla se link già presente
-        if (currentDescription.includes('wa.me/')) {
-            console.log('ℹ️ Link WhatsApp già presente nell\'evento');
-            return;
+        const needsWhatsAppLink = !currentDescription.includes('wa.me/');
+        
+        // 3. 🆕 v2.5.27: Calcola nuovo titolo evento (solo Nome Cognome)
+        const newTitle = cognome ? `${nome} ${cognome}`.trim() : nome;
+        const currentTitle = event.result.summary || '';
+        const needsTitleUpdate = currentTitle !== newTitle;
+        
+        // 4. Prepara aggiornamenti
+        const updates = {};
+        
+        if (needsWhatsAppLink) {
+            // Aggiungi link alla descrizione
+            const newDescription = currentDescription + 
+                (currentDescription ? '\n\n' : '') + 
+                `📱 WhatsApp: ${whatsappLink}`;
+            updates.description = newDescription;
+            console.log('📱 Aggiungo link WhatsApp:', whatsappLink);
         }
         
-        // 3. Aggiungi link alla descrizione
-        const newDescription = currentDescription + 
-            (currentDescription ? '\n\n' : '') + 
-            `📱 WhatsApp: ${whatsappLink}`;
+        if (needsTitleUpdate) {
+            updates.summary = newTitle;
+            console.log('✏️ Rinomino evento:', currentTitle, '→', newTitle);
+        }
         
-        // 4. Aggiorna evento
-        await window.gapi.client.calendar.events.patch({
-            calendarId: calendarId,
-            eventId: eventId,
-            resource: {
-                description: newDescription
-            }
-        });
-        
-        console.log('✅ Link WhatsApp aggiunto all\'evento:', whatsappLink);
+        // 5. Aggiorna evento solo se necessario
+        if (Object.keys(updates).length > 0) {
+            await window.gapi.client.calendar.events.patch({
+                calendarId: calendarId,
+                eventId: eventId,
+                resource: updates
+            });
+            
+            console.log('✅ Evento Google Calendar aggiornato:', updates);
+        } else {
+            console.log('ℹ️ Evento già aggiornato, nessuna modifica necessaria');
+        }
         
     } catch (error) {
-        console.error('❌ Errore aggiunta link WhatsApp:', error);
+        console.error('❌ Errore aggiornamento evento:', error);
         throw error;
     }
 }
@@ -1393,4 +1411,4 @@ window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 
-console.log('✅ Google Calendar module v2.5.26 caricato - GOOGLE MEET INTEGRATION');
+console.log('✅ Google Calendar module v2.5.27 caricato - AUTO RENAME CALENDAR EVENT');
