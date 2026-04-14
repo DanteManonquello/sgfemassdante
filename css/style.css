@@ -1130,3 +1130,68 @@ body {
     color: #9ca3af;
     font-style: italic;
 }
+
+/* ===== 🆕 v2.5.26: GOOGLE MEET LINK ===== */
+.google-meet-link {
+    text-align: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #0f9d58 0%, #0b8043 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(15, 157, 88, 0.3);
+}
+
+.btn-meet {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    color: #0f9d58;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-meet:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(15, 157, 88, 0.4);
+    color: #0b8043;
+}
+
+.btn-meet i {
+    font-size: 18px;
+}
+
+/* Link Google Meet nella HOME (calendar view) */
+.event-meet {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 12px;
+}
+
+.event-meet a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #0f9d58 0%, #0b8043 100%);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(15, 157, 88, 0.3);
+}
+
+.event-meet a:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 157, 88, 0.5);
+}
+
+.event-meet i {
+    font-size: 14px;
+}

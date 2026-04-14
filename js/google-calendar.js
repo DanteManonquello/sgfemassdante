@@ -893,6 +893,28 @@ function fillFormFromEvent(event) {
     }
     document.getElementById('orario').value = orarioValue;
     
+    // 🆕 v2.5.26: Mostra link Google Meet se presente
+    const meetLink = event.hangoutLink || 
+                   (event.conferenceData && event.conferenceData.entryPoints && 
+                    event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video')?.uri);
+    
+    const meetContainer = document.getElementById('googleMeetContainer');
+    if (meetContainer) {
+        if (meetLink) {
+            meetContainer.innerHTML = `
+                <div class="google-meet-link">
+                    <a href="${meetLink}" target="_blank" class="btn-meet">
+                        <i class="fas fa-video"></i> Apri Google Meet
+                    </a>
+                </div>
+            `;
+            meetContainer.style.display = 'block';
+            console.log('📹 Google Meet disponibile:', meetLink);
+        } else {
+            meetContainer.style.display = 'none';
+        }
+    }
+    
     // ✨ NUOVO: Controllo genere SETTER (non lead) per {YY}
     if (window.checkSetterGenderFromEvent) {
         window.checkSetterGenderFromEvent(event);
@@ -1237,6 +1259,17 @@ async function displayCalendarView() {
             const statusIcon = event.contacted ? 'fa-check-circle' : 'fa-clock';
             const statusText = event.contacted ? 'Contattato' : 'Da contattare';
             
+            // 🆕 v2.5.26: Link Google Meet se presente
+            const meetLink = event.hangoutLink || 
+                           (event.conferenceData && event.conferenceData.entryPoints && 
+                            event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video')?.uri);
+            const meetHtml = meetLink ? 
+                `<div class="event-meet">
+                    <a href="${meetLink}" target="_blank" title="Apri Google Meet">
+                        <i class="fas fa-video"></i> Meet
+                    </a>
+                </div>` : '';
+            
             html += `
                 <div class="calendar-event-item ${statusClass}">
                     <div class="event-time">
@@ -1245,6 +1278,7 @@ async function displayCalendarView() {
                     <div class="event-name">
                         <i class="fas fa-user"></i> ${leadName}
                     </div>
+                    ${meetHtml}
                     <div class="event-status">
                         <i class="fas ${statusIcon}"></i> ${statusText}
                     </div>
@@ -1359,4 +1393,4 @@ window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 
-console.log('✅ Google Calendar module v2.5.20 caricato - FIX SERVIZIO DA CALENDARIO');
+console.log('✅ Google Calendar module v2.5.26 caricato - GOOGLE MEET INTEGRATION');
