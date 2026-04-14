@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.23 - CONTROLLO INCONGRUENZE SOCIETÀ (WIP)
+   TESTmess v2.5.24 - OGGI/DOMANI + LINK WHATSAPP IN CALENDAR
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.23 inizializzato - CONTROLLO INCONGRUENZE SOCIETÀ (WIP)');
+    console.log('🚀 TESTmess v2.5.24 inizializzato - OGGI/DOMANI + LINK WHATSAPP IN CALENDAR');
     
     setupSidebar();
     setupNavigation();

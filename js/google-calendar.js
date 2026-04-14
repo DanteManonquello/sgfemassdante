@@ -862,12 +862,28 @@ function fillFormFromEvent(event) {
     document.getElementById('servizio').value = servizio;
     document.getElementById('societaSelect').value = societa;
     
-    // Compila giorno e orario dall'evento
+    // Compila giorno e orario dall'evento (v2.5.24: oggi/domani)
     const eventDate = new Date(event.start);
-    const giorniSettimana = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
-    const giornoSettimana = giorniSettimana[eventDate.getDay()];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
-    document.getElementById('giorno').value = giornoSettimana;
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const eventDateOnly = new Date(eventDate);
+    eventDateOnly.setHours(0, 0, 0, 0);
+    
+    let giornoValue;
+    if (eventDateOnly.getTime() === today.getTime()) {
+        giornoValue = 'oggi';
+    } else if (eventDateOnly.getTime() === tomorrow.getTime()) {
+        giornoValue = 'domani';
+    } else {
+        const giorniSettimana = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+        giornoValue = giorniSettimana[eventDate.getDay()];
+    }
+    
+    document.getElementById('giorno').value = giornoValue;
     
     const hours = eventDate.getHours();
     const minutes = eventDate.getMinutes();
@@ -1046,15 +1062,81 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
         } catch (error) {
             console.warn('⚠️ Drive fallito (403?), dati comunque salvati su localStorage:', error.message);
         }
+        
+        // 5. 🆕 v2.5.24: Aggiungi link WhatsApp nella descrizione evento
+        try {
+            await addWhatsAppLinkToEvent(eventId, telefono);
+        } catch (error) {
+            console.warn('⚠️ Non riesco ad aggiornare evento con link WhatsApp:', error.message);
+        }
     } else {
         console.log('ℹ️ Lead già marcato come contattato:', nome);
     }
     
-    // 5. 🔥 FIX v2.5.15: Refresh UI DOPO salvataggio
+    // 6. 🔥 FIX v2.5.15: Refresh UI DOPO salvataggio
     const selectDay = document.getElementById('selectDay');
     if (selectDay && selectDay.value) {
         await updateLeadSelectorByDate(selectDay.value);
         console.log('🔄 UI aggiornata dopo salvataggio lead');
+    }
+}
+
+// ===== v2.5.24: AGGIUNGI LINK WHATSAPP NELLA DESCRIZIONE EVENTO =====
+async function addWhatsAppLinkToEvent(eventId, telefono) {
+    if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
+        console.warn('⚠️ Google Calendar API non inizializzata');
+        return;
+    }
+    
+    if (!telefono) {
+        console.warn('⚠️ Nessun telefono fornito per link WhatsApp');
+        return;
+    }
+    
+    try {
+        // Normalizza numero per WhatsApp
+        let phoneClean = telefono.replace(/\s+/g, '').replace(/^\\+/, '');
+        if (!phoneClean.startsWith('39') && phoneClean.length === 10) {
+            phoneClean = '39' + phoneClean;
+        }
+        
+        // Genera link WhatsApp
+        const whatsappLink = `https://wa.me/${phoneClean}`;
+        
+        // 1. Ottieni evento corrente
+        const calendarId = 'primary'; // Assumiamo calendario primario
+        const event = await window.gapi.client.calendar.events.get({
+            calendarId: calendarId,
+            eventId: eventId
+        });
+        
+        const currentDescription = event.result.description || '';
+        
+        // 2. Controlla se link già presente
+        if (currentDescription.includes('wa.me/')) {
+            console.log('ℹ️ Link WhatsApp già presente nell\'evento');
+            return;
+        }
+        
+        // 3. Aggiungi link alla descrizione
+        const newDescription = currentDescription + 
+            (currentDescription ? '\n\n' : '') + 
+            `📱 WhatsApp: ${whatsappLink}`;
+        
+        // 4. Aggiorna evento
+        await window.gapi.client.calendar.events.patch({
+            calendarId: calendarId,
+            eventId: eventId,
+            resource: {
+                description: newDescription
+            }
+        });
+        
+        console.log('✅ Link WhatsApp aggiunto all\'evento:', whatsappLink);
+        
+    } catch (error) {
+        console.error('❌ Errore aggiunta link WhatsApp:', error);
+        throw error;
     }
 }
 
