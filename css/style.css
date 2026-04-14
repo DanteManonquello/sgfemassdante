@@ -1195,3 +1195,22 @@ body {
 .event-meet i {
     font-size: 14px;
 }
+
+/* ===== v2.5.29: BOTTONE + AGGIUNGI MEET (BLU) ===== */
+.btn-meet-add {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    color: white !important;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-meet-add:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.btn-meet-add:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.28 - RIPRISTINO GOOGLE MEET v2.5.23
+   TESTmess v2.5.29 - BOTTONE MEET SEMPRE VISIBILE
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.28 inizializzato - RIPRISTINO GOOGLE MEET v2.5.23');
+    console.log('🚀 TESTmess v2.5.29 inizializzato - BOTTONE MEET SEMPRE VISIBILE');
     
     setupSidebar();
     setupNavigation();

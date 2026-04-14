@@ -893,7 +893,7 @@ function fillFormFromEvent(event) {
     }
     document.getElementById('orario').value = orarioValue;
     
-    // 🆕 v2.5.26: Mostra link Google Meet se presente
+    // 🆕 v2.5.29: Mostra bottone Google Meet SEMPRE (passati, presenti, futuri)
     const meetLink = event.hangoutLink || 
                    (event.conferenceData && event.conferenceData.entryPoints && 
                     event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video')?.uri);
@@ -901,6 +901,7 @@ function fillFormFromEvent(event) {
     const meetContainer = document.getElementById('googleMeetContainer');
     if (meetContainer) {
         if (meetLink) {
+            // Meet esiste → link verde
             meetContainer.innerHTML = `
                 <div class="google-meet-link">
                     <a href="${meetLink}" target="_blank" class="btn-meet">
@@ -911,7 +912,18 @@ function fillFormFromEvent(event) {
             meetContainer.style.display = 'block';
             console.log('📹 Google Meet disponibile:', meetLink);
         } else {
-            meetContainer.style.display = 'none';
+            // Meet NON esiste → bottone blu "+ Aggiungi Meet" (SEMPRE, anche eventi passati)
+            meetContainer.innerHTML = `
+                <div class="google-meet-link">
+                    <button onclick="addMeetToEventFromForm('${event.id}', '${event.calendarId || 'primary'}')" 
+                            class="btn-meet btn-meet-add" 
+                            id="addMeetBtnForm">
+                        <i class="fas fa-video"></i> + Aggiungi Meet
+                    </button>
+                </div>
+            `;
+            meetContainer.style.display = 'block';
+            console.log('📹 Bottone "+ Aggiungi Meet" mostrato (evento senza Meet)');
         }
     }
     
@@ -1277,10 +1289,7 @@ async function displayCalendarView() {
             const statusIcon = event.contacted ? 'fa-check-circle' : 'fa-clock';
             const statusText = event.contacted ? 'Contattato' : 'Da contattare';
             
-            // v2.5.23: Bottone Meet — solo eventi futuri; se Meet già presente mostra link
-            const now = new Date();
-            const eventStart = new Date(event.start);
-            const isFuture = eventStart > now;
+            // v2.5.29: Bottone Meet SEMPRE visibile (passati, presenti, futuri)
             const existingMeet = event.hangoutLink || 
                 (event.conferenceData && event.conferenceData.entryPoints && 
                  event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video') 
@@ -1288,17 +1297,17 @@ async function displayCalendarView() {
             
             let meetBtn = '';
             if (existingMeet) {
+                // Meet esiste → link verde
                 meetBtn = `<a href="${existingMeet}" target="_blank" class="event-meet-btn event-meet-btn--exists" title="Apri Google Meet">
                     <i class="fab fa-google"></i> Meet
                 </a>`;
-            } else if (isFuture) {
+            } else {
+                // Meet NON esiste → bottone blu "+ Meet" (SEMPRE, anche passati)
                 meetBtn = `<button class="event-meet-btn event-meet-btn--add" 
                     onclick="addMeetToEvent('${event.id}', '${event.calendarId}', this)" 
                     title="Aggiungi Google Meet a questo evento">
                     <i class="fas fa-video"></i> + Meet
                 </button>`;
-            } else {
-                meetBtn = `<span class="event-meet-btn event-meet-btn--past" title="Evento passato"><i class="fas fa-video"></i></span>`;
             }
             
             html += `
@@ -1515,6 +1524,40 @@ async function addMeetToEvent(eventId, calendarId, btnEl) {
     }
 }
 
+// ===== v2.5.29: WRAPPER PER AGGIUNGERE MEET DAL FORM =====
+async function addMeetToEventFromForm(eventId, calendarId) {
+    const btn = document.getElementById('addMeetBtnForm');
+    
+    // Chiama la funzione esistente
+    await addMeetToEvent(eventId, calendarId, btn);
+    
+    // Dopo 3.5 secondi, ricarica evento per aggiornare form con Meet appena creato
+    setTimeout(async () => {
+        try {
+            if (window.accessToken && gapi?.client?.calendar) {
+                const response = await gapi.client.calendar.events.get({
+                    calendarId: calendarId,
+                    eventId: eventId
+                });
+                
+                // Aggiorna localStorage
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS) || '[]');
+                const idx = saved.findIndex(e => e.id === eventId);
+                if (idx >= 0) {
+                    saved[idx] = response.result;
+                    localStorage.setItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS, JSON.stringify(saved));
+                }
+                
+                // Ri-popola il form con evento aggiornato
+                fillFormFromEvent(response.result);
+                console.log('✅ Form aggiornato con Meet appena creato');
+            }
+        } catch (e) {
+            console.warn('⚠️ Non riesco ad aggiornare form:', e);
+        }
+    }, 3500);
+}
+
 // ===== ESPORTA FUNZIONI =====
 window.syncCalendarEvents = syncCalendarEvents;
 window.updateDaySelector = updateDaySelector;
@@ -1528,5 +1571,6 @@ window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
+window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.29: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.28 caricato - RIPRISTINO GOOGLE MEET v2.5.23');
+console.log('✅ Google Calendar module v2.5.29 caricato - BOTTONE MEET SEMPRE VISIBILE');
