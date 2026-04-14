@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.30 - MEET SOTTO DROPDOWN LEAD
+   TESTmess v2.5.31 - FIX RENAME SEMPRE + BOTTONE MEET PIÙ PICCOLO
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.30 inizializzato - MEET SOTTO DROPDOWN LEAD');
+    console.log('🚀 TESTmess v2.5.31 inizializzato - FIX RENAME SEMPRE + BOTTONE MEET PIÙ PICCOLO');
     
     setupSidebar();
     setupNavigation();

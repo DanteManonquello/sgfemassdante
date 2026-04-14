@@ -1118,6 +1118,7 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
 
 // ===== v2.5.24: AGGIUNGI LINK WHATSAPP NELLA DESCRIZIONE EVENTO =====
 // ===== v2.5.27: RINOMINA EVENTO CON SOLO NOME COGNOME =====
+// ===== v2.5.31: FIX - Rename SEMPRE attivo (anche eventi già esistenti) =====
 async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome) {
     if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
         console.warn('⚠️ Google Calendar API non inizializzata');
@@ -1189,6 +1190,55 @@ async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome) {
     } catch (error) {
         console.error('❌ Errore aggiornamento evento:', error);
         throw error;
+    }
+}
+
+// ===== v2.5.31: CONTROLLA E CORREGGI TITOLO EVENTO (quando selezioni lead) =====
+async function ensureEventTitleCorrect(event) {
+    if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
+        return; // API non pronta, skip silenzioso
+    }
+    
+    if (!event || !event.id) {
+        return; // Evento invalido
+    }
+    
+    try {
+        // Estrai nome e cognome dal nome lead
+        const leadName = (event.summary || '').trim();
+        if (!leadName || leadName === 'Senza nome') {
+            return; // Skip se nome vuoto
+        }
+        
+        // Parsing nome/cognome (stesso algoritmo di fillFormFromEvent)
+        const { firstName, lastName } = parseNameSurname(leadName);
+        const newTitle = lastName ? `${firstName} ${lastName}`.trim() : firstName;
+        
+        // Controlla se titolo è già corretto
+        if (event.summary === newTitle) {
+            return; // Già corretto, skip
+        }
+        
+        // Aggiorna titolo
+        const calendarId = event.calendarId || 'primary';
+        await window.gapi.client.calendar.events.patch({
+            calendarId: calendarId,
+            eventId: event.id,
+            resource: { summary: newTitle }
+        });
+        
+        console.log('✏️ [v2.5.31] Titolo evento corretto:', event.summary, '→', newTitle);
+        
+        // 🔄 Aggiorna evento nel localStorage cache
+        const allEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+        const eventIndex = allEvents.findIndex(e => e.id === event.id);
+        if (eventIndex !== -1) {
+            allEvents[eventIndex].summary = newTitle;
+            localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
+        }
+        
+    } catch (error) {
+        console.warn('⚠️ Non riesco a correggere titolo evento:', error.message);
     }
 }
 
@@ -1410,11 +1460,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Cambio lead
     const selectLead = document.getElementById('selectLead');
     if (selectLead) {
-        selectLead.addEventListener('change', function() {
+        selectLead.addEventListener('change', async function() {
             const selectedOption = this.options[this.selectedIndex];
             if (selectedOption && selectedOption.dataset.eventData) {
                 const event = JSON.parse(selectedOption.dataset.eventData);
                 fillFormFromEvent(event);
+                
+                // 🆕 v2.5.31: Controlla e correggi titolo evento (rename SEMPRE)
+                await ensureEventTitleCorrect(event);
             }
         });
     }
@@ -1573,4 +1626,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.30 caricato - MEET SOTTO DROPDOWN LEAD');
+console.log('✅ Google Calendar module v2.5.31 caricato - FIX RENAME SEMPRE');
