@@ -1277,16 +1277,29 @@ async function displayCalendarView() {
             const statusIcon = event.contacted ? 'fa-check-circle' : 'fa-clock';
             const statusText = event.contacted ? 'Contattato' : 'Da contattare';
             
-            // 🆕 v2.5.26: Link Google Meet se presente
-            const meetLink = event.hangoutLink || 
-                           (event.conferenceData && event.conferenceData.entryPoints && 
-                            event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video')?.uri);
-            const meetHtml = meetLink ? 
-                `<div class="event-meet">
-                    <a href="${meetLink}" target="_blank" title="Apri Google Meet">
-                        <i class="fas fa-video"></i> Meet
-                    </a>
-                </div>` : '';
+            // v2.5.23: Bottone Meet — solo eventi futuri; se Meet già presente mostra link
+            const now = new Date();
+            const eventStart = new Date(event.start);
+            const isFuture = eventStart > now;
+            const existingMeet = event.hangoutLink || 
+                (event.conferenceData && event.conferenceData.entryPoints && 
+                 event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video') 
+                 ? event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video').uri : null);
+            
+            let meetBtn = '';
+            if (existingMeet) {
+                meetBtn = `<a href="${existingMeet}" target="_blank" class="event-meet-btn event-meet-btn--exists" title="Apri Google Meet">
+                    <i class="fab fa-google"></i> Meet
+                </a>`;
+            } else if (isFuture) {
+                meetBtn = `<button class="event-meet-btn event-meet-btn--add" 
+                    onclick="addMeetToEvent('${event.id}', '${event.calendarId}', this)" 
+                    title="Aggiungi Google Meet a questo evento">
+                    <i class="fas fa-video"></i> + Meet
+                </button>`;
+            } else {
+                meetBtn = `<span class="event-meet-btn event-meet-btn--past" title="Evento passato"><i class="fas fa-video"></i></span>`;
+            }
             
             html += `
                 <div class="calendar-event-item ${statusClass}">
@@ -1296,10 +1309,10 @@ async function displayCalendarView() {
                     <div class="event-name">
                         <i class="fas fa-user"></i> ${leadName}
                     </div>
-                    ${meetHtml}
                     <div class="event-status">
                         <i class="fas ${statusIcon}"></i> ${statusText}
                     </div>
+                    <div class="event-meet">${meetBtn}</div>
                 </div>
             `;
         });
@@ -1398,6 +1411,110 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// ===== AGGIUNGI GOOGLE MEET A EVENTO (v2.5.23) =====
+async function addMeetToEvent(eventId, calendarId, btnEl) {
+    // Guard se gapi non pronto
+    if (!window.accessToken || !gapi?.client?.calendar) {
+        showNotification('❌ Connetti Google prima di aggiungere Meet', 'error');
+        return;
+    }
+    
+    // Feedback visivo immediato
+    if (btnEl) {
+        btnEl.disabled = true;
+        btnEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
+    }
+    
+    try {
+        // requestId univoco con timestamp per evitare errori 400 su retry
+        const requestId = eventId.replace(/[^a-z0-9]/gi, '') + Date.now();
+        
+        const response = await gapi.client.calendar.events.patch({
+            calendarId: calendarId,
+            eventId: eventId,
+            conferenceDataVersion: 1,
+            resource: {
+                conferenceData: {
+                    createRequest: {
+                        requestId: requestId,
+                        conferenceSolutionKey: { type: 'hangoutsMeet' }
+                    }
+                }
+            }
+        });
+        
+        const updatedEvent = response.result;
+        
+        // Google genera il link in modo asincrono — può servire qualche secondo
+        // Estraiamo subito hangoutLink se disponibile
+        const meetLink = updatedEvent.hangoutLink || 
+            (updatedEvent.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri);
+        
+        // Aggiorna localStorage immediatamente senza aspettare sync completa
+        try {
+            const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS) || '[]');
+            const idx = saved.findIndex(e => e.id === eventId);
+            if (idx >= 0) {
+                saved[idx].conferenceData = updatedEvent.conferenceData || null;
+                saved[idx].hangoutLink = updatedEvent.hangoutLink || null;
+                localStorage.setItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS, JSON.stringify(saved));
+            }
+        } catch(lsErr) {
+            console.warn('⚠️ Impossibile aggiornare localStorage:', lsErr);
+        }
+        
+        if (meetLink) {
+            showNotification(`✅ Google Meet aggiunto! Fireflies userà il titolo "${updatedEvent.summary || 'evento'}"`, 'success');
+            // Rendi il bottone un link diretto
+            if (btnEl) {
+                const container = btnEl.parentElement;
+                container.innerHTML = `<a href="${meetLink}" target="_blank" class="event-meet-btn event-meet-btn--exists" title="Apri Google Meet">
+                    <i class="fab fa-google"></i> Meet
+                </a>`;
+            }
+        } else {
+            // Link non ancora pronto — aggiorna dopo 3 secondi
+            showNotification('⏳ Meet creato, link in generazione...', 'info');
+            if (btnEl) {
+                btnEl.innerHTML = '<i class="fas fa-check"></i> Creato';
+                btnEl.style.opacity = '0.6';
+            }
+            setTimeout(async () => {
+                try {
+                    const r2 = await gapi.client.calendar.events.get({ calendarId, eventId });
+                    const link2 = r2.result.hangoutLink || 
+                        r2.result.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri;
+                    if (link2) {
+                        // Aggiorna localStorage
+                        const saved = JSON.parse(localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS) || '[]');
+                        const idx = saved.findIndex(e => e.id === eventId);
+                        if (idx >= 0) {
+                            saved[idx].hangoutLink = r2.result.hangoutLink || null;
+                            saved[idx].conferenceData = r2.result.conferenceData || null;
+                            localStorage.setItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS, JSON.stringify(saved));
+                        }
+                        displayCalendarView();
+                        showNotification('✅ Link Meet pronto!', 'success');
+                    }
+                } catch(e) { console.warn('⚠️ Retry get event:', e); }
+            }, 3000);
+        }
+        
+        // Aggiorna la vista calendario per riflettere il cambio
+        await displayCalendarView();
+        
+    } catch (err) {
+        console.error('❌ Errore addMeetToEvent:', err);
+        const msg = err?.result?.error?.message || err.message || 'Errore sconosciuto';
+        showNotification('❌ Errore aggiunta Meet: ' + msg, 'error');
+        // Ripristina bottone
+        if (btnEl) {
+            btnEl.disabled = false;
+            btnEl.innerHTML = '<i class="fas fa-video"></i> + Meet';
+        }
+    }
+}
+
 // ===== ESPORTA FUNZIONI =====
 window.syncCalendarEvents = syncCalendarEvents;
 window.updateDaySelector = updateDaySelector;
@@ -1410,5 +1527,6 @@ window.getFilteredEventsByCalendar = getFilteredEventsByCalendar;
 window.renderCalendarCheckboxes = renderCalendarCheckboxes;
 window.markLeadAsContacted = markLeadAsContacted;
 window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cache
+window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 
-console.log('✅ Google Calendar module v2.5.27 caricato - AUTO RENAME CALENDAR EVENT');
+console.log('✅ Google Calendar module v2.5.28 caricato - RIPRISTINO GOOGLE MEET v2.5.23');
