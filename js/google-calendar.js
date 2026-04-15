@@ -863,7 +863,17 @@ function fillFormFromEvent(event) {
     document.getElementById('societaSelect').value = societa;
     
     // Compila giorno e orario dall'evento (v2.5.24: oggi/domani)
-    const eventDate = new Date(event.start);
+    // 🆕 v2.5.34: FIX - Usa event.start.dateTime o event.start.date, non event.start diretto
+    const eventStartString = event.start.dateTime || event.start.date || event.start;
+    const eventDate = new Date(eventStartString);
+    
+    console.log('📅 [v2.5.34] DEBUG giorno/orario:', { 
+        eventStart: event.start,
+        eventStartString,
+        eventDate, 
+        isValidDate: !isNaN(eventDate.getTime()) 
+    });
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -884,6 +894,7 @@ function fillFormFromEvent(event) {
     }
     
     document.getElementById('giorno').value = giornoValue;
+    console.log('📅 [v2.5.34] Giorno impostato:', giornoValue);
     
     const hours = eventDate.getHours();
     const minutes = eventDate.getMinutes();
@@ -892,6 +903,7 @@ function fillFormFromEvent(event) {
         orarioValue += `.${minutes.toString().padStart(2, '0')}`;
     }
     document.getElementById('orario').value = orarioValue;
+    console.log('⏰ [v2.5.34] Orario impostato:', orarioValue, { hours, minutes });
     
     // 🆕 v2.5.33: Mostra bottone Google Meet SEMPRE + Check COMPLETO Meet
     // Check TUTTI i formati possibili per Meet:
@@ -1726,4 +1738,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.33 caricato - FIX RENAME + MEET + WHATSAPP');
+console.log('✅ Google Calendar module v2.5.34 caricato - HOTFIX ORARIO/GIORNO');

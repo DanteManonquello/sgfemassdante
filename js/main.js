@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.33 - FIX RENAME + MEET CHECK + WHATSAPP IN CIMA
+   TESTmess v2.5.34 - HOTFIX ORARIO/GIORNO NaN
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.33 inizializzato - FIX RENAME + MEET + WHATSAPP IN CIMA');
+    console.log('🚀 TESTmess v2.5.34 inizializzato - HOTFIX ORARIO/GIORNO');
     
     setupSidebar();
     setupNavigation();
