@@ -893,14 +893,24 @@ function fillFormFromEvent(event) {
     }
     document.getElementById('orario').value = orarioValue;
     
-    // 🆕 v2.5.30: Mostra bottone Google Meet SEMPRE (passati, presenti, futuri)
+    // 🆕 v2.5.32: Mostra bottone Google Meet SEMPRE + Check completo Meet
+    // Check TUTTI i formati possibili per Meet:
+    // 1. hangoutLink (legacy)
+    // 2. conferenceData.entryPoints[].uri (nuovo)
+    // 3. conferenceData.conferenceId (fallback)
+    const hasMeetLegacy = !!event.hangoutLink;
+    const hasMeetNew = !!(event.conferenceData && event.conferenceData.entryPoints && 
+                         event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video'));
+    const hasMeetId = !!(event.conferenceData && event.conferenceData.conferenceId);
+    
     const meetLink = event.hangoutLink || 
-                   (event.conferenceData && event.conferenceData.entryPoints && 
-                    event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video')?.uri);
+                   (event.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri);
+    
+    const hasMeet = hasMeetLegacy || hasMeetNew || hasMeetId;
     
     const meetContainer = document.getElementById('googleMeetContainer');
     if (meetContainer) {
-        if (meetLink) {
+        if (hasMeet && meetLink) {
             // Meet esiste → link verde
             meetContainer.innerHTML = `
                 <div class="google-meet-link">
@@ -910,9 +920,13 @@ function fillFormFromEvent(event) {
                 </div>
             `;
             meetContainer.style.display = 'block';
-            console.log('📹 Google Meet disponibile:', meetLink);
+            console.log('📹 [v2.5.32] Google Meet disponibile:', meetLink, { hasMeetLegacy, hasMeetNew, hasMeetId });
+        } else if (hasMeet && !meetLink) {
+            // Meet ID presente ma link mancante → nascondi bottone (caso raro)
+            meetContainer.style.display = 'none';
+            console.warn('⚠️ [v2.5.32] Meet ID presente ma link mancante, bottone nascosto');
         } else {
-            // Meet NON esiste → bottone blu "+ Aggiungi Meet" (SEMPRE, anche eventi passati)
+            // Meet NON esiste → bottone blu "+ Aggiungi Meet"
             meetContainer.innerHTML = `
                 <div class="google-meet-link">
                     <button onclick="addMeetToEventFromForm('${event.id}', '${event.calendarId || 'primary'}')" 
@@ -923,7 +937,7 @@ function fillFormFromEvent(event) {
                 </div>
             `;
             meetContainer.style.display = 'block';
-            console.log('📹 Bottone "+ Aggiungi Meet" mostrato (evento senza Meet)');
+            console.log('📹 [v2.5.32] Bottone "+ Aggiungi Meet" mostrato (evento senza Meet)');
         }
     }
     
@@ -1194,6 +1208,7 @@ async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome) {
 }
 
 // ===== v2.5.31: CONTROLLA E CORREGGI TITOLO EVENTO (quando selezioni lead) =====
+// ===== v2.5.32: AGGIUNGI ANCHE WHATSAPP LINK SE MANCANTE =====
 async function ensureEventTitleCorrect(event) {
     if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
         return; // API non pronta, skip silenzioso
@@ -1215,30 +1230,86 @@ async function ensureEventTitleCorrect(event) {
         const newTitle = lastName ? `${firstName} ${lastName}`.trim() : firstName;
         
         // Controlla se titolo è già corretto
-        if (event.summary === newTitle) {
-            return; // Già corretto, skip
+        const titleNeedsUpdate = event.summary !== newTitle;
+        
+        // 🆕 v2.5.32: Controlla se manca WhatsApp link
+        const telefono = document.getElementById('telefono')?.value.trim();
+        let whatsappNeedsUpdate = false;
+        
+        if (telefono) {
+            // Verifica se evento ha già WhatsApp link
+            const currentEvent = await window.gapi.client.calendar.events.get({
+                calendarId: event.calendarId || 'primary',
+                eventId: event.id
+            });
+            
+            const currentDescription = currentEvent.result.description || '';
+            whatsappNeedsUpdate = !currentDescription.includes('wa.me/');
+            
+            console.log('📱 [v2.5.32] Check WhatsApp:', { telefono, hasMaiLink: !whatsappNeedsUpdate });
         }
         
-        // Aggiorna titolo
-        const calendarId = event.calendarId || 'primary';
-        await window.gapi.client.calendar.events.patch({
-            calendarId: calendarId,
-            eventId: event.id,
-            resource: { summary: newTitle }
-        });
+        // Se nulla da aggiornare, skip
+        if (!titleNeedsUpdate && !whatsappNeedsUpdate) {
+            return;
+        }
         
-        console.log('✏️ [v2.5.31] Titolo evento corretto:', event.summary, '→', newTitle);
+        // Prepara aggiornamenti
+        const updates = {};
         
-        // 🔄 Aggiorna evento nel localStorage cache
-        const allEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
-        const eventIndex = allEvents.findIndex(e => e.id === event.id);
-        if (eventIndex !== -1) {
-            allEvents[eventIndex].summary = newTitle;
-            localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
+        if (titleNeedsUpdate) {
+            updates.summary = newTitle;
+            console.log('✏️ [v2.5.32] Titolo evento da correggere:', event.summary, '→', newTitle);
+        }
+        
+        if (whatsappNeedsUpdate && telefono) {
+            // Normalizza numero
+            let phoneClean = telefono.replace(/\s+/g, '').replace(/^\+/, '');
+            if (!phoneClean.startsWith('39') && phoneClean.length === 10) {
+                phoneClean = '39' + phoneClean;
+            }
+            
+            const whatsappLink = `https://wa.me/${phoneClean}`;
+            const currentEvent = await window.gapi.client.calendar.events.get({
+                calendarId: event.calendarId || 'primary',
+                eventId: event.id
+            });
+            
+            const currentDescription = currentEvent.result.description || '';
+            const newDescription = currentDescription + 
+                (currentDescription ? '\n\n' : '') + 
+                `📱 WhatsApp: ${whatsappLink}`;
+            
+            updates.description = newDescription;
+            console.log('📱 [v2.5.32] WhatsApp link da aggiungere:', whatsappLink);
+        }
+        
+        // Aggiorna evento
+        if (Object.keys(updates).length > 0) {
+            await window.gapi.client.calendar.events.patch({
+                calendarId: event.calendarId || 'primary',
+                eventId: event.id,
+                resource: updates
+            });
+            
+            console.log('✅ [v2.5.32] Evento aggiornato:', updates);
+            
+            // 🔄 Aggiorna evento nel localStorage cache
+            const allEvents = JSON.parse(localStorage.getItem('calendarEvents') || '[]');
+            const eventIndex = allEvents.findIndex(e => e.id === event.id);
+            if (eventIndex !== -1) {
+                if (updates.summary) {
+                    allEvents[eventIndex].summary = updates.summary;
+                }
+                if (updates.description) {
+                    allEvents[eventIndex].description = updates.description;
+                }
+                localStorage.setItem('calendarEvents', JSON.stringify(allEvents));
+            }
         }
         
     } catch (error) {
-        console.warn('⚠️ Non riesco a correggere titolo evento:', error.message);
+        console.warn('⚠️ [v2.5.32] Non riesco a correggere evento:', error.message);
     }
 }
 
@@ -1626,4 +1697,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.31 caricato - FIX RENAME SEMPRE');
+console.log('✅ Google Calendar module v2.5.32 caricato - FIX CRITICI');

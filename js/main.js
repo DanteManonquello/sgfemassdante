@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.31 - FIX RENAME SEMPRE + BOTTONE MEET PIÙ PICCOLO
+   TESTmess v2.5.32 - FIX CRITICI: Meet check + Rubrica + WhatsApp link
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.31 inizializzato - FIX RENAME SEMPRE + BOTTONE MEET PIÙ PICCOLO');
+    console.log('🚀 TESTmess v2.5.32 inizializzato - FIX CRITICI: Meet check + Rubrica + WhatsApp');
     
     setupSidebar();
     setupNavigation();
@@ -530,8 +530,8 @@ async function generateMessage(e) {
     // Salva ultimo messaggio
     saveLastMessage(nome, cognome, telefono);
     
-    // Salva in Google Contacts
-    if (window.saveContactToGoogle && cognome && telefono) {
+    // Salva in Google Contacts (v2.5.32: anche senza cognome)
+    if (window.saveContactToGoogle && nome && telefono) {
         checkAndSaveContact(nome, cognome, telefono, societa);
     }
     
@@ -576,8 +576,8 @@ async function sendToWhatsApp() {
     saveToCronologia(nome, cognome, telefono, messaggio, servizio, societa);
     saveLastMessage(nome, cognome, telefono);
     
-    // Salva in Google Contacts
-    if (window.saveContactToGoogle && cognome && telefono) {
+    // Salva in Google Contacts (v2.5.32: anche senza cognome)
+    if (window.saveContactToGoogle && nome && telefono) {
         checkAndSaveContact(nome, cognome, telefono, societa);
     }
     
