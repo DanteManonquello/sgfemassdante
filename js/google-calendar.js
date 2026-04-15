@@ -1738,4 +1738,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.34 caricato - HOTFIX ORARIO/GIORNO');
+console.log('✅ Google Calendar module v2.5.35 caricato - FIX RUBRICA + TAR SIZE');

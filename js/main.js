@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.34 - HOTFIX ORARIO/GIORNO NaN
+   TESTmess v2.5.35 - FIX RUBRICA + TAR SIZE
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.34 inizializzato - HOTFIX ORARIO/GIORNO');
+    console.log('🚀 TESTmess v2.5.35 inizializzato - FIX RUBRICA + TAR SIZE');
     
     setupSidebar();
     setupNavigation();
@@ -593,6 +593,8 @@ async function sendToWhatsApp() {
 
 // ===== CHECK E SALVA CONTATTO =====
 async function checkAndSaveContact(nome, cognome, telefono, societa) {
+    console.log('🔵 [v2.5.35] checkAndSaveContact CHIAMATA:', { nome, cognome, telefono, societa });
+    
     const contactData = {
         firstName: nome,
         lastName: cognome,
@@ -601,22 +603,30 @@ async function checkAndSaveContact(nome, cognome, telefono, societa) {
     };
     
     if (window.saveContactToGoogle) {
+        console.log('🔵 [v2.5.35] Chiamata saveContactToGoogle...');
         const result = await window.saveContactToGoogle(contactData);
+        console.log('🔵 [v2.5.35] Risultato saveContactToGoogle:', result);
         
         // Gestisci risultato
         if (result && result.success) {
             showNotification('✅ Contatto salvato in rubrica', 'success');
+            console.log('✅ [v2.5.35] Contatto salvato con successo');
         } else if (result && result.skipped) {
             if (result.reason === 'duplicate') {
                 showNotification('ℹ️ Contatto già presente in rubrica', 'info');
-                console.log('📇 Contatto già esistente, salvataggio saltato');
+                console.log('📇 [v2.5.35] Contatto già esistente, salvataggio saltato');
             } else if (result.reason === 'conflict') {
                 showNotification('ℹ️ Contatto già esistente (conflitto API)', 'info');
+                console.log('📇 [v2.5.35] Conflitto API, contatto già esistente');
             }
         } else {
             // Errore generico
-            showNotification('⚠️ Impossibile salvare contatto', 'error');
+            showNotification('⚠️ Impossibile salvare contatto in rubrica', 'error');
+            console.error('❌ [v2.5.35] Salvataggio fallito, result:', result);
         }
+    } else {
+        console.error('❌ [v2.5.35] saveContactToGoogle NON disponibile!');
+        showNotification('❌ Funzione rubrica non disponibile', 'error');
     }
 }
 
