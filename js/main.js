@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.32 - FIX CRITICI: Meet check + Rubrica + WhatsApp link
+   TESTmess v2.5.33 - FIX RENAME + MEET CHECK + WHATSAPP IN CIMA
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.32 inizializzato - FIX CRITICI: Meet check + Rubrica + WhatsApp');
+    console.log('🚀 TESTmess v2.5.33 inizializzato - FIX RENAME + MEET + WHATSAPP IN CIMA');
     
     setupSidebar();
     setupNavigation();

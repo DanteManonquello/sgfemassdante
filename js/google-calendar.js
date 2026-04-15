@@ -893,20 +893,33 @@ function fillFormFromEvent(event) {
     }
     document.getElementById('orario').value = orarioValue;
     
-    // 🆕 v2.5.32: Mostra bottone Google Meet SEMPRE + Check completo Meet
+    // 🆕 v2.5.33: Mostra bottone Google Meet SEMPRE + Check COMPLETO Meet
     // Check TUTTI i formati possibili per Meet:
     // 1. hangoutLink (legacy)
     // 2. conferenceData.entryPoints[].uri (nuovo)
     // 3. conferenceData.conferenceId (fallback)
+    // 4. descrizione contiene "meet.google.com" (fallback sicuro)
     const hasMeetLegacy = !!event.hangoutLink;
     const hasMeetNew = !!(event.conferenceData && event.conferenceData.entryPoints && 
                          event.conferenceData.entryPoints.find(ep => ep.entryPointType === 'video'));
     const hasMeetId = !!(event.conferenceData && event.conferenceData.conferenceId);
+    const hasMeetInDescription = !!(event.description && event.description.includes('meet.google.com'));
     
     const meetLink = event.hangoutLink || 
-                   (event.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri);
+                   (event.conferenceData?.entryPoints?.find(ep => ep.entryPointType === 'video')?.uri) ||
+                   (hasMeetInDescription ? event.description.match(/https:\/\/meet\.google\.com\/[a-z\-]+/)?.[0] : null);
     
-    const hasMeet = hasMeetLegacy || hasMeetNew || hasMeetId;
+    const hasMeet = hasMeetLegacy || hasMeetNew || hasMeetId || hasMeetInDescription;
+    
+    console.log('🔍 [v2.5.33] DEBUG Meet check:', { 
+        hasMeetLegacy, 
+        hasMeetNew, 
+        hasMeetId, 
+        hasMeetInDescription,
+        hasMeet,
+        meetLink,
+        eventId: event.id
+    });
     
     const meetContainer = document.getElementById('googleMeetContainer');
     if (meetContainer) {
@@ -920,11 +933,11 @@ function fillFormFromEvent(event) {
                 </div>
             `;
             meetContainer.style.display = 'block';
-            console.log('📹 [v2.5.32] Google Meet disponibile:', meetLink, { hasMeetLegacy, hasMeetNew, hasMeetId });
+            console.log('📹 [v2.5.33] Google Meet disponibile:', meetLink);
         } else if (hasMeet && !meetLink) {
-            // Meet ID presente ma link mancante → nascondi bottone (caso raro)
+            // Meet ID presente ma link mancante → nascondi bottone
             meetContainer.style.display = 'none';
-            console.warn('⚠️ [v2.5.32] Meet ID presente ma link mancante, bottone nascosto');
+            console.warn('⚠️ [v2.5.33] Meet presente ma link non trovato, bottone nascosto');
         } else {
             // Meet NON esiste → bottone blu "+ Aggiungi Meet"
             meetContainer.innerHTML = `
@@ -937,7 +950,7 @@ function fillFormFromEvent(event) {
                 </div>
             `;
             meetContainer.style.display = 'block';
-            console.log('📹 [v2.5.32] Bottone "+ Aggiungi Meet" mostrato (evento senza Meet)');
+            console.log('📹 [v2.5.33] Bottone "+ Aggiungi Meet" mostrato (evento senza Meet)');
         }
     }
     
@@ -1175,12 +1188,11 @@ async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome) {
         const updates = {};
         
         if (needsWhatsAppLink) {
-            // Aggiungi link alla descrizione
-            const newDescription = currentDescription + 
-                (currentDescription ? '\n\n' : '') + 
-                `📱 WhatsApp: ${whatsappLink}`;
+            // 🆕 v2.5.33: Aggiungi link WhatsApp IN CIMA alla descrizione
+            const newDescription = `📱 WhatsApp: ${whatsappLink}` +
+                (currentDescription ? '\n\n' + currentDescription : '');
             updates.description = newDescription;
-            console.log('📱 Aggiungo link WhatsApp:', whatsappLink);
+            console.log('📱 [v2.5.33] Aggiungo link WhatsApp in cima:', whatsappLink);
         }
         
         if (needsTitleUpdate) {
@@ -1220,14 +1232,31 @@ async function ensureEventTitleCorrect(event) {
     
     try {
         // Estrai nome e cognome dal nome lead
-        const leadName = (event.summary || '').trim();
+        let leadName = (event.summary || '').trim();
         if (!leadName || leadName === 'Senza nome') {
             return; // Skip se nome vuoto
         }
         
+        // 🆕 v2.5.33: Rimuovi tutto dopo ":" (es. "ARTURO ALVARI: Finanza..." → "ARTURO ALVARI")
+        if (leadName.includes(':')) {
+            leadName = leadName.split(':')[0].trim();
+            console.log('🔪 [v2.5.33] Rimosso testo dopo ":", nuovo nome:', leadName);
+        }
+        
+        // 🆕 v2.5.33: Rimuovi tutto dopo " - " (es. "Mario Rossi - SG Lead" → "Mario Rossi")
+        if (leadName.includes(' - ')) {
+            leadName = leadName.split(' - ')[0].trim();
+            console.log('🔪 [v2.5.33] Rimosso testo dopo " - ", nuovo nome:', leadName);
+        }
+        
+        // 🆕 v2.5.33: Rimuovi tutto tra parentesi (es. "Mario Rossi (Dante)" → "Mario Rossi")
+        leadName = leadName.replace(/\s*\([^)]*\)/g, '').trim();
+        
         // Parsing nome/cognome (stesso algoritmo di fillFormFromEvent)
         const { firstName, lastName } = parseNameSurname(leadName);
         const newTitle = lastName ? `${firstName} ${lastName}`.trim() : firstName;
+        
+        console.log('✏️ [v2.5.33] Parsing:', { original: event.summary, cleaned: leadName, newTitle });
         
         // Controlla se titolo è già corretto
         const titleNeedsUpdate = event.summary !== newTitle;
@@ -1276,12 +1305,12 @@ async function ensureEventTitleCorrect(event) {
             });
             
             const currentDescription = currentEvent.result.description || '';
-            const newDescription = currentDescription + 
-                (currentDescription ? '\n\n' : '') + 
-                `📱 WhatsApp: ${whatsappLink}`;
+            // 🆕 v2.5.33: WhatsApp link in CIMA alla descrizione
+            const newDescription = `📱 WhatsApp: ${whatsappLink}` +
+                (currentDescription ? '\n\n' + currentDescription : '');
             
             updates.description = newDescription;
-            console.log('📱 [v2.5.32] WhatsApp link da aggiungere:', whatsappLink);
+            console.log('📱 [v2.5.33] WhatsApp link da aggiungere in cima:', whatsappLink);
         }
         
         // Aggiorna evento
@@ -1697,4 +1726,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.32 caricato - FIX CRITICI');
+console.log('✅ Google Calendar module v2.5.33 caricato - FIX RENAME + MEET + WHATSAPP');
