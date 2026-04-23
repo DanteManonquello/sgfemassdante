@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.35 - FIX RUBRICA + TAR SIZE
+   TESTmess v2.5.36 - FIX CACHE + SITO FUNZIONANTE
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.35 inizializzato - FIX RUBRICA + TAR SIZE');
+    console.log('🚀 TESTmess v2.5.36 inizializzato - FIX CACHE + SITO FUNZIONANTE');
     
     setupSidebar();
     setupNavigation();

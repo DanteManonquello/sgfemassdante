@@ -56,7 +56,7 @@ let isScanningContacts = false;
 
 // ===== INIZIALIZZAZIONE =====
 function initRubrica() {
-    console.log('📒 Rubrica module v2.5.35 initialized - FIX RUBRICA + TAR SIZE');
+    console.log('📒 Rubrica module v2.5.36 initialized - FIX CACHE + SITO FUNZIONANTE');
     
     // Inizializza date picker con valori default
     initDateRangePicker();
