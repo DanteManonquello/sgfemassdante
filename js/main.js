@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.37 - AUTO-ATTIVA TOGGLE WHATSAPP DA EVENTO
+   TESTmess v2.5.38 - SALVA E LEGGI MODALITÀ VIDEOCALL DA GOOGLE CALENDAR
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.37 inizializzato - AUTO-ATTIVA TOGGLE WHATSAPP DA EVENTO');
+    console.log('🚀 TESTmess v2.5.38 inizializzato - SALVA E LEGGI MODALITÀ VIDEOCALL');
     
     setupSidebar();
     setupNavigation();
@@ -1018,9 +1018,20 @@ async function markLeadAsContactedFromCalendar(nome, cognome, telefono) {
         const eventId = selectedOption.dataset.eventId;
         const eventDate = eventData.start || new Date().toISOString();
         
+        // 🆕 v2.5.38: Ottieni modalità videocall dal toggle
+        const toggleGroup = document.querySelectorAll('.toggle-group')[1]; // Secondo toggle group
+        let videocallMode = 'LINK'; // Default
+        if (toggleGroup) {
+            const activeBtn = toggleGroup.querySelector('.toggle-btn.active');
+            if (activeBtn) {
+                videocallMode = activeBtn.dataset.value; // 'LINK' o 'WA'
+            }
+        }
+        console.log('📹 [v2.5.38] Modalità videocall da salvare:', videocallMode);
+        
         // 🔥 Salva su Google Drive invece di localStorage
         if (window.markLeadAsContacted) {
-            await window.markLeadAsContacted(eventId, nome, cognome, telefono, eventDate);
+            await window.markLeadAsContacted(eventId, nome, cognome, telefono, eventDate, videocallMode);
         }
         
         console.log('✅ Lead marcato come contattato su Drive:', nome);

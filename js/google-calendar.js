@@ -966,27 +966,45 @@ function fillFormFromEvent(event) {
         }
     }
     
-    // 🆕 v2.5.37: Auto-attiva toggle WhatsApp se evento contiene wa.me
-    const eventDescription = event.description || '';
-    const isWhatsAppCall = eventDescription.includes('wa.me/') || 
-                          eventDescription.toLowerCase().includes('videochiamerò su whatsapp') ||
-                          eventDescription.toLowerCase().includes('whatsapp come richiesto');
+    // 🆕 v2.5.38: Leggi modalità videocall da extendedProperties (PRIORITÀ ALTA)
+    let videocallMode = null;
+    if (event.extendedProperties && event.extendedProperties.private && event.extendedProperties.private.videocallMode) {
+        videocallMode = event.extendedProperties.private.videocallMode;
+        console.log('📹 [v2.5.38] Modalità videocall da extendedProperties:', videocallMode);
+    }
     
+    // 🆕 v2.5.37: Auto-attiva toggle WhatsApp se evento contiene wa.me (FALLBACK se extendedProperties manca)
+    if (!videocallMode) {
+        const eventDescription = event.description || '';
+        const isWhatsAppCall = eventDescription.includes('wa.me/') || 
+                              eventDescription.toLowerCase().includes('videochiamerò su whatsapp') ||
+                              eventDescription.toLowerCase().includes('whatsapp come richiesto');
+        
+        if (isWhatsAppCall) {
+            videocallMode = 'WA';
+            console.log('📱 [v2.5.37] Evento contiene WhatsApp in descrizione → Modalità WA (fallback)');
+        } else {
+            videocallMode = 'LINK'; // Default
+            console.log('🔗 [v2.5.37] Evento NON contiene WhatsApp → Modalità LINK (default)');
+        }
+    }
+    
+    // Imposta toggle basandosi su videocallMode
     const toggleGroup = document.querySelectorAll('.toggle-group')[1]; // Secondo toggle group (modalità videocall)
     if (toggleGroup) {
         const linkBtn = toggleGroup.querySelector('[data-value="LINK"]');
         const waBtn = toggleGroup.querySelector('[data-value="WA"]');
         
-        if (isWhatsAppCall && waBtn) {
+        if (videocallMode === 'WA' && waBtn && linkBtn) {
             // Evento è WhatsApp → attiva toggle WhatsApp
             linkBtn.classList.remove('active');
             waBtn.classList.add('active');
-            console.log('📱 [v2.5.37] Evento contiene WhatsApp → Toggle WhatsApp attivato');
-        } else if (linkBtn) {
-            // Evento NON è WhatsApp → attiva toggle Link (default)
+            console.log('✅ [v2.5.38] Toggle WhatsApp ATTIVATO');
+        } else if (linkBtn && waBtn) {
+            // Evento è Link → attiva toggle Link (default)
             waBtn.classList.remove('active');
             linkBtn.classList.add('active');
-            console.log('🔗 [v2.5.37] Evento NON contiene WhatsApp → Toggle Link attivato');
+            console.log('✅ [v2.5.38] Toggle Link ATTIVATO (default)');
         }
     }
     
@@ -1123,7 +1141,7 @@ function detectGenderFromName(name) {
 }
 
 // ===== MARCA LEAD COME CONTATTATO =====
-async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) {
+async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate, videocallMode) {
     const contactedEntry = {
         eventId: eventId,
         nome: nome,
@@ -1162,8 +1180,9 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
         
         // 5. 🆕 v2.5.24: Aggiungi link WhatsApp nella descrizione evento
         // 🆕 v2.5.27: Rinomina evento con solo Nome Cognome
+        // 🆕 v2.5.38: Salva modalità videocall in extendedProperties
         try {
-            await addWhatsAppLinkToEvent(eventId, telefono, nome, cognome);
+            await addWhatsAppLinkToEvent(eventId, telefono, nome, cognome, videocallMode);
         } catch (error) {
             console.warn('⚠️ Non riesco ad aggiornare evento con link WhatsApp:', error.message);
         }
@@ -1182,7 +1201,8 @@ async function markLeadAsContacted(eventId, nome, cognome, telefono, eventDate) 
 // ===== v2.5.24: AGGIUNGI LINK WHATSAPP NELLA DESCRIZIONE EVENTO =====
 // ===== v2.5.27: RINOMINA EVENTO CON SOLO NOME COGNOME =====
 // ===== v2.5.31: FIX - Rename SEMPRE attivo (anche eventi già esistenti) =====
-async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome) {
+// ===== v2.5.38: SALVA MODALITÀ VIDEOCALL IN EXTENDED PROPERTIES =====
+async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome, videocallMode) {
     if (!window.gapi || !window.gapi.client || !window.gapi.client.calendar) {
         console.warn('⚠️ Google Calendar API non inizializzata');
         return;
@@ -1234,6 +1254,16 @@ async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome) {
         if (needsTitleUpdate) {
             updates.summary = newTitle;
             console.log('✏️ Rinomino evento:', currentTitle, '→', newTitle);
+        }
+        
+        // 🆕 v2.5.38: Salva modalità videocall in extendedProperties
+        if (videocallMode) {
+            updates.extendedProperties = {
+                private: {
+                    videocallMode: videocallMode // 'LINK' o 'WA'
+                }
+            };
+            console.log('📹 [v2.5.38] Salvo modalità videocall:', videocallMode);
         }
         
         // 5. Aggiorna evento solo se necessario
@@ -1762,4 +1792,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.37 caricato - AUTO-ATTIVA TOGGLE WHATSAPP DA EVENTO');
+console.log('✅ Google Calendar module v2.5.38 caricato - SALVA E LEGGI MODALITÀ VIDEOCALL');
