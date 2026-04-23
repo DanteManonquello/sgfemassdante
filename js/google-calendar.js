@@ -966,6 +966,30 @@ function fillFormFromEvent(event) {
         }
     }
     
+    // 🆕 v2.5.37: Auto-attiva toggle WhatsApp se evento contiene wa.me
+    const eventDescription = event.description || '';
+    const isWhatsAppCall = eventDescription.includes('wa.me/') || 
+                          eventDescription.toLowerCase().includes('videochiamerò su whatsapp') ||
+                          eventDescription.toLowerCase().includes('whatsapp come richiesto');
+    
+    const toggleGroup = document.querySelectorAll('.toggle-group')[1]; // Secondo toggle group (modalità videocall)
+    if (toggleGroup) {
+        const linkBtn = toggleGroup.querySelector('[data-value="LINK"]');
+        const waBtn = toggleGroup.querySelector('[data-value="WA"]');
+        
+        if (isWhatsAppCall && waBtn) {
+            // Evento è WhatsApp → attiva toggle WhatsApp
+            linkBtn.classList.remove('active');
+            waBtn.classList.add('active');
+            console.log('📱 [v2.5.37] Evento contiene WhatsApp → Toggle WhatsApp attivato');
+        } else if (linkBtn) {
+            // Evento NON è WhatsApp → attiva toggle Link (default)
+            waBtn.classList.remove('active');
+            linkBtn.classList.add('active');
+            console.log('🔗 [v2.5.37] Evento NON contiene WhatsApp → Toggle Link attivato');
+        }
+    }
+    
     // ✨ NUOVO: Controllo genere SETTER (non lead) per {YY}
     if (window.checkSetterGenderFromEvent) {
         window.checkSetterGenderFromEvent(event);
@@ -1738,4 +1762,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.36 caricato - FIX CACHE + SITO FUNZIONANTE');
+console.log('✅ Google Calendar module v2.5.37 caricato - AUTO-ATTIVA TOGGLE WHATSAPP DA EVENTO');

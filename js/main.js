@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.36 - FIX CACHE + SITO FUNZIONANTE
+   TESTmess v2.5.37 - AUTO-ATTIVA TOGGLE WHATSAPP DA EVENTO
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.36 inizializzato - FIX CACHE + SITO FUNZIONANTE');
+    console.log('🚀 TESTmess v2.5.37 inizializzato - AUTO-ATTIVA TOGGLE WHATSAPP DA EVENTO');
     
     setupSidebar();
     setupNavigation();

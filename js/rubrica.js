@@ -56,7 +56,7 @@ let isScanningContacts = false;
 
 // ===== INIZIALIZZAZIONE =====
 function initRubrica() {
-    console.log('📒 Rubrica module v2.5.36 initialized - FIX CACHE + SITO FUNZIONANTE');
+    console.log('📒 Rubrica module v2.5.37 initialized - AUTO-ATTIVA TOGGLE WHATSAPP DA EVENTO');
     
     // Inizializza date picker con valori default
     initDateRangePicker();
