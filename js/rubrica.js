@@ -56,7 +56,7 @@ let isScanningContacts = false;
 
 // ===== INIZIALIZZAZIONE =====
 function initRubrica() {
-    console.log('📒 Rubrica module v2.5.38 initialized - SALVA E LEGGI MODALITÀ VIDEOCALL');
+    console.log('📒 Rubrica module v2.5.39 initialized - FIX API REQUEST + DEBUG');
     
     // Inizializza date picker con valori default
     initDateRangePicker();

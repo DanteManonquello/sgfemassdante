@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.38 - SALVA E LEGGI MODALITÀ VIDEOCALL DA GOOGLE CALENDAR
+   TESTmess v2.5.39 - FIX API REQUEST EXTENDEDPROPERTIES + DEBUG
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.38 inizializzato - SALVA E LEGGI MODALITÀ VIDEOCALL');
+    console.log('🚀 TESTmess v2.5.39 inizializzato - FIX API REQUEST + DEBUG');
     
     setupSidebar();
     setupNavigation();

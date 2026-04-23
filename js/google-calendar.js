@@ -216,7 +216,9 @@ async function syncCalendarEvents(silent = false, loadMore = false) {
                 'timeMax': timeMax,
                 'showDeleted': false,
                 'singleEvents': true,
-                'orderBy': 'startTime'
+                'orderBy': 'startTime',
+                'conferenceDataVersion': 1  // 🆕 v2.5.39: Richiedi conferenceData (per Meet)
+                // 🆕 v2.5.39: extendedProperties.private viene sempre restituito automaticamente
             });
             
             const events = response.result.items || [];
@@ -251,7 +253,10 @@ async function syncCalendarEvents(silent = false, loadMore = false) {
             attendees: event.attendees || [],
             location: event.location || '',
             calendarName: event.calendarName,
-            calendarId: event.calendarId
+            calendarId: event.calendarId,
+            hangoutLink: event.hangoutLink || null,  // 🆕 v2.5.39: Salva Meet link legacy
+            conferenceData: event.conferenceData || null,  // 🆕 v2.5.39: Salva conferenceData
+            extendedProperties: event.extendedProperties || null  // 🆕 v2.5.39: Salva extendedProperties (incluso videocallMode)
         }));
         
         localStorage.setItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS, JSON.stringify(eventsData));
@@ -966,11 +971,21 @@ function fillFormFromEvent(event) {
         }
     }
     
+    // 🆕 v2.5.39: DEBUG - Log completo evento per verificare extendedProperties
+    console.log('🔍 [v2.5.39] DEBUG Evento completo:', {
+        id: event.id,
+        summary: event.summary,
+        hasExtendedProperties: !!event.extendedProperties,
+        extendedProperties: event.extendedProperties,
+        videocallModeInExtended: event.extendedProperties?.private?.videocallMode,
+        descriptionPreview: (event.description || '').substring(0, 100)
+    });
+    
     // 🆕 v2.5.38: Leggi modalità videocall da extendedProperties (PRIORITÀ ALTA)
     let videocallMode = null;
     if (event.extendedProperties && event.extendedProperties.private && event.extendedProperties.private.videocallMode) {
         videocallMode = event.extendedProperties.private.videocallMode;
-        console.log('📹 [v2.5.38] Modalità videocall da extendedProperties:', videocallMode);
+        console.log('✅ [v2.5.39] Modalità videocall da extendedProperties:', videocallMode);
     }
     
     // 🆕 v2.5.37: Auto-attiva toggle WhatsApp se evento contiene wa.me (FALLBACK se extendedProperties manca)
@@ -1263,18 +1278,34 @@ async function addWhatsAppLinkToEvent(eventId, telefono, nome, cognome, videocal
                     videocallMode: videocallMode // 'LINK' o 'WA'
                 }
             };
-            console.log('📹 [v2.5.38] Salvo modalità videocall:', videocallMode);
+            console.log('📹 [v2.5.39] Salvo modalità videocall in extendedProperties:', {
+                videocallMode,
+                eventId,
+                willUpdate: true
+            });
         }
         
         // 5. Aggiorna evento solo se necessario
         if (Object.keys(updates).length > 0) {
+            console.log('🔄 [v2.5.39] Invio PATCH a Google Calendar:', updates);
+            
             await window.gapi.client.calendar.events.patch({
                 calendarId: calendarId,
                 eventId: eventId,
                 resource: updates
             });
             
-            console.log('✅ Evento Google Calendar aggiornato:', updates);
+            console.log('✅ [v2.5.39] Evento Google Calendar aggiornato con successo');
+            
+            // 🆕 v2.5.39: Verifica immediata che extendedProperties sia stato salvato
+            const verifyEvent = await window.gapi.client.calendar.events.get({
+                calendarId: calendarId,
+                eventId: eventId
+            });
+            console.log('🔍 [v2.5.39] Verifica post-update:', {
+                hasExtendedProperties: !!verifyEvent.result.extendedProperties,
+                videocallMode: verifyEvent.result.extendedProperties?.private?.videocallMode
+            });
         } else {
             console.log('ℹ️ Evento già aggiornato, nessuna modifica necessaria');
         }
@@ -1792,4 +1823,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.38 caricato - SALVA E LEGGI MODALITÀ VIDEOCALL');
+console.log('✅ Google Calendar module v2.5.39 caricato - FIX API REQUEST + DEBUG');
