@@ -1,5 +1,5 @@
 /* ================================================================================
-   TESTmess v2.5.39 - FIX API REQUEST EXTENDEDPROPERTIES + DEBUG
+   TESTmess v2.5.40 - AUTO-MIGRAZIONE CACHE VECCHIO
    ================================================================================ */
 
 // ===== STORAGE KEYS (per compatibilità con DriveStorage) =====
@@ -49,7 +49,7 @@ async function setStorageItem(key, value) {
 
 // ===== INIZIALIZZAZIONE =====
 document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 TESTmess v2.5.39 inizializzato - FIX API REQUEST + DEBUG');
+    console.log('🚀 TESTmess v2.5.40 inizializzato - AUTO-MIGRAZIONE CACHE');
     
     setupSidebar();
     setupNavigation();

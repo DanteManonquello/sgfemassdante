@@ -494,6 +494,19 @@ function loadSavedEvents() {
     const eventsJSON = localStorage.getItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
     if (eventsJSON) {
         const events = JSON.parse(eventsJSON);
+        
+        // 🆕 v2.5.40: Check se cache è vecchio (senza conferenceData/extendedProperties)
+        const hasNewFields = events.length > 0 && events[0].hasOwnProperty('conferenceData');
+        
+        if (!hasNewFields && events.length > 0) {
+            console.warn('⚠️ [v2.5.40] Cache eventi vecchio (pre-v2.5.39) - ricarico da API...');
+            // Cancella cache vecchio e forza ricarica
+            localStorage.removeItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
+            localStorage.removeItem(STORAGE_KEYS_CALENDAR.LAST_SYNC);
+            // Non caricare dal cache, l'app ricaricherà automaticamente da API
+            return;
+        }
+        
         console.log(`📅 Caricati ${events.length} eventi dal cache`);
         updateDaySelector();
     }
@@ -1823,4 +1836,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.39 caricato - FIX API REQUEST + DEBUG');
+console.log('✅ Google Calendar module v2.5.40 caricato - AUTO-MIGRAZIONE CACHE');
