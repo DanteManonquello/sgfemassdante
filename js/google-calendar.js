@@ -1053,10 +1053,14 @@ function fillFormFromEvent(event) {
         window.checkSetterGenderFromEvent(event);
     }
     
-    // Aggiorna anteprima
-    if (window.updatePreview) {
-        updatePreview();
-    }
+    // 🆕 v2.5.42: FIX - Aggiorna anteprima DOPO che il toggle è stato cambiato nel DOM
+    // Aspetta 50ms per dare tempo al browser di applicare le classi CSS .active
+    setTimeout(() => {
+        if (window.updatePreview) {
+            updatePreview();
+            console.log('🔄 [v2.5.42] Anteprima aggiornata dopo cambio toggle');
+        }
+    }, 50);
     
     // v2.5.19: Resetta flag dopo 100ms (attende che tutti gli event listener siano processati)
     setTimeout(() => {
@@ -1848,4 +1852,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.41 caricato - FIX RELOAD DOPO MIGRAZIONE');
+console.log('✅ Google Calendar module v2.5.42 caricato - FIX TOGGLE WHATSAPP ANTEPRIMA');
