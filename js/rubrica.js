@@ -1,10 +1,11 @@
 /* ================================================================================
-   RUBRICA - TESTmess v2.5.8
+   RUBRICA - TESTmess v2.5.41
    
    Gestisce l'elenco dei contatti NON ancora salvati in rubrica Google.
    Mostra una sezione laterale con i nominativi da salvare.
    
-   CHANGELOG v2.5.8:
+   CHANGELOG v2.5.41:
+   - 🔧 Bump versione per allineamento con fix cache reload
    - 🐛 FIX CRITICO: mostraNotifica → showNotification (era undefined)
    - 🐛 FIX CRITICO: Export showNotification in main.js
    - ✅ Auto-logout forzato su errore 401 (token scaduto)

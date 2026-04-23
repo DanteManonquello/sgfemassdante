@@ -503,7 +503,19 @@ function loadSavedEvents() {
             // Cancella cache vecchio e forza ricarica
             localStorage.removeItem(STORAGE_KEYS_CALENDAR.CALENDAR_EVENTS);
             localStorage.removeItem(STORAGE_KEYS_CALENDAR.LAST_SYNC);
-            // Non caricare dal cache, l'app ricaricherà automaticamente da API
+            
+            // 🆕 v2.5.41: FIX - Ricarica IMMEDIATAMENTE gli eventi dall'API
+            console.log('🔄 [v2.5.41] Avvio download automatico eventi da Google...');
+            // Aspetta che gapi sia pronto, poi scarica
+            setTimeout(() => {
+                if (window.accessToken && gapi?.client?.calendar) {
+                    loadMoreCalendarEvents(false); // Scarica silenziosamente
+                } else {
+                    console.warn('⚠️ [v2.5.41] Google non ancora connesso, l\'utente deve fare login');
+                }
+            }, 1000); // Aspetta 1 secondo per dare tempo al login
+            
+            // Non caricare dal cache vecchio
             return;
         }
         
@@ -1836,4 +1848,4 @@ window.loadSavedEvents = loadSavedEvents; // v2.5.7: Export per caricare da cach
 window.addMeetToEvent = addMeetToEvent; // v2.5.23: Aggiungi Google Meet a evento
 window.addMeetToEventFromForm = addMeetToEventFromForm; // v2.5.30: Wrapper per form
 
-console.log('✅ Google Calendar module v2.5.40 caricato - AUTO-MIGRAZIONE CACHE');
+console.log('✅ Google Calendar module v2.5.41 caricato - FIX RELOAD DOPO MIGRAZIONE');

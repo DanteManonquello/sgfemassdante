@@ -1260,4 +1260,4 @@ async function loadMessaggiList() {
 // ===== EXPORT FUNZIONI GLOBALI =====
 window.showNotification = showNotification;
 
-console.log('✅ Main.js v2.5.8 caricato');
+console.log('✅ Main.js v2.5.41 caricato');
